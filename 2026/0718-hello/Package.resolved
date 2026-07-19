@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/shinyaoguri/metaphor.git",
       "state" : {
-        "revision" : "325417a91cf80e889a9fcce3ce6c91d0e3b1b598",
-        "version" : "0.5.3"
+        "revision" : "8c792d0f27f6f3b3ca8301215b8efaac68e48d95",
+        "version" : "0.7.0"
       }
     }
   ],
