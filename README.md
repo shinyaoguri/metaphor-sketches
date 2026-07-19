@@ -38,4 +38,4 @@ metaphor watch    # ライブビューア + ホットリロード（単発実行
 | 作品 | テンプレート | metaphor | 気付き / 踏んだ Issue |
 |---|---|---|---|
 | [2026/0718-hello](2026/0718-hello/) | 2d | 0.5.3 | scaffold→build→Probe 検証 green。installer 残骸でテンプレートが古く生成される問題を発見 → [cli#69](https://github.com/shinyaoguri/metaphor-cli/issues/69)、.gitignore に `.metaphor/` が無い → [cli#70](https://github.com/shinyaoguri/metaphor-cli/issues/70)（いずれも v0.4.0 で解決済み） |
-| [2026/0718-memory-stress](2026/0718-memory-stress/) | 3d | 0.5.3 | フェーズ制メモリ/性能ストレスハーネス。リークなしを確認。App Nap で fps 1/6 → [#266](https://github.com/shinyaoguri/metaphor/issues/266)、pixels 経路 +145MB 常駐 → [#267](https://github.com/shinyaoguri/metaphor/issues/267)、9万頂点/フレーム 40fps 上限 → [#268](https://github.com/shinyaoguri/metaphor/issues/268) |
+| [2026/0718-memory-stress](2026/0718-memory-stress/) | 3d | 0.6.0 | フェーズ制メモリ/性能ストレスハーネス。リークなしを確認。App Nap で fps 1/6 → [#266](https://github.com/shinyaoguri/metaphor/issues/266)（v0.6.0 のライブラリ既定抑止で解決、bump 時に再検証済み）、pixels 経路 +145MB 常駐 → [#267](https://github.com/shinyaoguri/metaphor/issues/267)、9万頂点/フレーム 40fps 上限 → [#268](https://github.com/shinyaoguri/metaphor/issues/268) |

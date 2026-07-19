@@ -62,16 +62,8 @@ final class Sketch0718MemoryStress: Sketch {
     var summary: [String] = []
     var phaseStartedAt: Float = 0
 
-    /// App Nap / バックグラウンド QoS 降格を防ぐ activity assertion。
-    /// これが無いと、ウィンドウのフォーカス状態次第でタイマー間引きが起き、
-    /// fps 計測が実行ごとに大きくブレる（thermal=nominal のまま全体が減速する）。
-    var activityToken: NSObjectProtocol?
-
     func setup() {
-        activityToken = ProcessInfo.processInfo.beginActivity(
-            options: [.userInitiated, .latencyCritical],
-            reason: "memory stress measurement"
-        )
+        // App Nap 抑止は metaphor v0.6.0 以降のライブラリ既定（metaphor#266）に委ねる
         frameRate(60)
         randomSeed(42)
         print("[stress] start footprint=\(fmt(footprintMB()))MB")

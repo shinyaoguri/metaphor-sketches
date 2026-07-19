@@ -8,7 +8,7 @@ let package = Package(
         .macOS(.v14)
     ],
     dependencies: [
-        .package(url: "https://github.com/shinyaoguri/metaphor.git", from: "0.5.3")
+        .package(url: "https://github.com/shinyaoguri/metaphor.git", from: "0.6.0")
     ],
     targets: [
         .executableTarget(
