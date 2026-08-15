@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: metaphor（ライブラリ）の不具合・改善要望
+    url: https://github.com/shinyaoguri/metaphor/issues
+    about: 描画 API・レンダリング・シェーダなど、ライブラリ側の機能や仕様の問題はこちらへ。
+  - name: metaphor-cli（CLI / MCP）の不具合・改善要望
+    url: https://github.com/shinyaoguri/metaphor-cli/issues
+    about: new / watch / mcp・テンプレート・ビューアなど、CLI 側の機能や仕様の問題はこちらへ。
