@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(swift build:*)",
+      "Bash(swift test:*)",
+      "Bash(swift package describe:*)",
+      "Bash(swift package resolve:*)",
+      "Bash(swift package show-dependencies:*)",
+      "Bash(metaphor version:*)",
+      "Bash(metaphor doctor:*)",
+      "Bash(metaphor examples:*)",
+      "Bash(metaphor run:*)",
+      "Bash(metaphor watch:*)",
+      "Bash(metaphor mcp:*)"
+    ]
+  }
+}
