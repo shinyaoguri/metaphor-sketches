@@ -1,0 +1,23 @@
+# ビルド生成物 (各作品ディレクトリにも metaphor new 生成の .gitignore があるが、
+# リポジトリ直下や新規作品でも取りこぼさないようルートで一括して効かせる)
+.build/
+.swiftpm/
+DerivedData/
+*.xcodeproj
+*.xcworkspace
+
+# metaphor の実行時ファイル (Probe / frame.json・スナップショット・書き出し)
+.metaphor/
+Captures/
+Exports/
+
+# 秘密情報・実データの置き場 (成果物やログへ持ち出さない)
+.env
+.env.*
+!.env.example
+
+# Claude Code の worktree 置き場
+.claude/worktrees/
+
+# macOS
+.DS_Store
