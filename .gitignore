@@ -11,6 +11,11 @@ DerivedData/
 Captures/
 Exports/
 
+# 秘密情報・実データの置き場 (成果物やログへ持ち出さない)
+.env
+.env.*
+!.env.example
+
 # Claude Code の worktree 置き場
 .claude/worktrees/
 
