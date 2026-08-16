@@ -53,8 +53,6 @@ final class Sketch0816Atelier: Sketch {
     lazy var wantShots: Bool = env["ATELIER_SHOTS"] == "1"
     /// GIF 用の連番 PNG の出力先。
     lazy var framesDir: String? = env["ATELIER_FRAMES"]
-    /// 解析値と実測値を CSV で流す。
-    lazy var wantTrace: Bool = env["ATELIER_TRACE"] == "1"
     /// 落ちうる口を、頼んだときだけ再現する。
     lazy var trapName: String? = env["ATELIER_TRAP"]
 
