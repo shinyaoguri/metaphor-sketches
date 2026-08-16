@@ -32,6 +32,10 @@
     "2026/0816-prism": {
       "verdictCommand": "tools/probe.sh check",
       "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
+    },
+    "2026/0816-galley": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^\\[(?P<id>[^\\]]+)\\]\\s+(?P<verdict>PASS|FAIL|LOOK)"
     }
   },
   "entries": [
@@ -851,6 +855,56 @@
         "metaphor": "0.9.0",
         "verdict": "FAIL",
         "note": "不透明どうしの subtract で α=0.000。他 9 モードは 1.000。RGB は dst-src で正しい。main 28b44e5 でも同じ実装"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 802,
+      "title": "textWidth() が advance 幅を返さず、呼び出しごとに ceil された光学バウンズを返す",
+      "sketch": "2026/0816-galley",
+      "ourIssue": 15,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "G1.width-additivity",
+          "G2.width-space-trim",
+          "G6.monospace-advance"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "Menlo 17px (真の advance 10.235px) で textWidth(\"i\")=11.0、\"i\"×16=164.0 → 1 字あたり 10.25。Helvetica で textWidth(\"T\")+textWidth(\"o\")=21.0 に対し textWidth(\"To\")=18.0。textWidth(\" \")=0.0 かつ textWidth(\"A \")=textWidth(\"A\")=12.0 だが textWidth(\" A\")=16.0"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 803,
+      "title": "textAlign(.center/.right) の基準幅にグリフビットマップの余白 2px が混ざる",
+      "sketch": "2026/0816-galley",
+      "ourIssue": 15,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "P1.ruler-mismatch"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "揃えに使われる幅と textWidth() の差が、号数 11〜105 のすべてで +2.0px ちょうど (glyphW = ceil(advance) + 2 の定数と一致)"
       },
       "recheck": {
         "at": null,
