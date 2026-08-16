@@ -48,6 +48,11 @@ tools/probe.sh trap NAME    # degenerate inputs — only on request
 tools/probe.sh soak 180     # unattended run; RSS/CPU to CSV, first half vs second half
 ```
 
+Soaked for 1800 s (180 samples, 24 cycles): RSS 84.3 → 86.3 MB, flat from ~750 s on
+(87.5 / 86.1 / 86.4 MB over the last three 5-cycle windows), CPU 4.9 % → 3.2 %.
+No leak signature. The 180 s run reported +11.3 MB, which turns out to be warm-up
+being counted — recomputed without the first 60 s it is +0.5 MB.
+
 Results appear in three places: stdout, the 講評 panel on screen, and `frame.json`'s
 `custom` as `check.<ID>`.
 
@@ -94,4 +99,8 @@ that band instead of pretending to know the tessellation.
 | fixed on main | [#717](https://github.com/shinyaoguri/metaphor/issues/717) fragment-only custom materials draw nothing on the instanced path |
 | fixed on main | [#527](https://github.com/shinyaoguri/metaphor/issues/527) `specular`/`emissive` gray overloads ignore `colorMode` |
 
-Everything else — 92 of 100 checks — matched the hand-solved value.
+The remaining 92 checks are 81 that matched the hand-solved value and 11 marked
+**要確認** — observations that resist a true/false verdict (the cone's default
+orientation, the unusable default `pointLight` falloff, shadow acne at bias 0,
+the missing accessor for the `Canvas3D` mesh cache, and so on). Their numbers are
+in the verification record.
