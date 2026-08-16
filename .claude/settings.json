@@ -12,7 +12,8 @@
       "Bash(metaphor examples:*)",
       "Bash(metaphor run:*)",
       "Bash(metaphor watch:*)",
-      "Bash(metaphor mcp:*)"
+      "Bash(metaphor mcp:*)",
+      "Bash(.claude/skills/sketch-verification/scripts/api-coverage.py:*)"
     ]
   }
 }

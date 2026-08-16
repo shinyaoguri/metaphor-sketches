@@ -23,6 +23,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 （アニメーション・遷移・インタラクション・時間依存の描画）は GIF も撮る。リポジトリに画像はコミットせず
 URL を貼る（撮影手順は gyazo-capture スキル）。これは本リポの issue でも上流への報告でも同じ。
 
+この 1〜6 を実際に回す手順（何を作るか決める測定・検査の内蔵・切り分けの型・踏んだ穴）は
+`.claude/skills/sketch-verification/` にある。**新しい作品に着手するときはこれを読む。**
+
 運用方針（main 直 push・1 作品 1 コミット・独立リポへの昇格）は [README.md](README.md) の
 「運用」節が正本。ここでは繰り返さない。
 
