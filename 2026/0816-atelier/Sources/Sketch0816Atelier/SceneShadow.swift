@@ -250,8 +250,11 @@ extension Sketch0816Atelier {
             if let early = scratch["shadow.early"] {
                 out.append(Finding("S1c.shadowLag", "標本を差し替えた直後の影",
                                    .look("差し替え直後の暗部=\(f0(early))px / \(Timing.settledPass) フレーム後=\(f0(late))px"
-                                         + " → シャドウ深度パスはメインパスの後に走るので、"
-                                         + "形を変えた最初のフレームは 1 つ前の形の影を映す")))
+                                         + " → 影の場面では読み戻しが 1 フレーム遅れる。"
+                                         + "**シャドウが有効な間は `loadPixels()` が同一フレームを読めず**、"
+                                         + "直前に確定したフレームを返す（metaphor が警告を出す）。"
+                                         + "シャドウ深度パスがメインパスの後に走ることも同じ向きに効くが、"
+                                         + "この計測はどちらが効いたかまでは分けられない")))
             }
             return out
 
