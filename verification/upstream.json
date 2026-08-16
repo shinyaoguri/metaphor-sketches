@@ -28,6 +28,10 @@
     "2026/0816-gamut": {
       "verdictCommand": "tools/probe.sh check",
       "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
+    },
+    "2026/0816-prism": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
     }
   },
   "entries": [
@@ -799,6 +803,54 @@
         "metaphor": "0.9.0",
         "verdict": "FAIL",
         "note": "α=0 の src を重ねても下地が変わる（multiply/screen/lightest/darkest）。α=0.5 が α=1 と 1 ビットも変わらない。subtract は α がクランプ前に掛かる。結果アルファも multiply/darkest が src.a×dst.a、subtract が dst.a−src.a で、subtract は α=1 で塗ると結果が完全に透明になる。main（28b44e5）でも BlendMode 周辺に差分なしで再現。最小再現は 2026/0816-probe-blendalpha"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 799,
+      "title": "Color(hex: String) が桁数を検証せず \"#FFF\" が白でなく青になる",
+      "sketch": "2026/0816-prism",
+      "ourIssue": 14,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "A12.hexStringInvalid"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "形式外 8 件中 4 件が色として通る（\"#F\" / \"#FFF\" / \"#12345\" / \"#1234567\"）。main 28b44e5 でも同じ実装"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 800,
+      "title": "BlendMode.subtract だけがアルファも減算し、描いた領域の α が 0 になる",
+      "sketch": "2026/0816-prism",
+      "ourIssue": 14,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "B9.blendAlpha"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "不透明どうしの subtract で α=0.000。他 9 モードは 1.000。RGB は dst-src で正しい。main 28b44e5 でも同じ実装"
       },
       "recheck": {
         "at": null,
