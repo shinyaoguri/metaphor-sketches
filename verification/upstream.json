@@ -36,6 +36,10 @@
     "2026/0816-galley": {
       "verdictCommand": "tools/probe.sh check",
       "verdictPattern": "^\\[(?P<id>[^\\]]+)\\]\\s+(?P<verdict>PASS|FAIL|LOOK)"
+    },
+    "2026/0816-atelier": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^\\[(?P<id>[^\\]]+)\\]\\s+(?P<verdict>PASS|FAIL|LOOK)"
     }
   },
   "entries": [
@@ -911,6 +915,134 @@
         "against": null,
         "verdict": null,
         "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 824,
+      "title": "screenX/Y/Z がカメラ背後で反転した値を返し、無効と判別できない",
+      "sketch": "2026/0816-atelier",
+      "ourIssue": 17,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "D5c.screenZBehindCamera"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "w=-120 の点で screenZ=1.535 / screenX=120.4（中心の左へ回る）"
+      },
+      "recheck": {
+        "at": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 825,
+      "title": "beginShape3D のシェイプに fill が二重に掛かる（頂点カラーにも fill が乗る）",
+      "sketch": "2026/0816-atelier",
+      "ourIssue": 17,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "H1.normalGiven",
+          "H1b.fillSquared",
+          "H2c.vertexColorTimesFill"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "実測 (0.647,0.286,0.071) は fill²×1.3 と一致。main でも未修正"
+      },
+      "recheck": {
+        "at": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 826,
+      "title": "material() のカスタムマテリアルが beginShape3D のシェイプに効かない",
+      "sketch": "2026/0816-atelier",
+      "ourIssue": 17,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "H6b.customMaterialImmediate"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "drawShape3DVertices が currentCustomMaterial を見ない。main でも同じ"
+      },
+      "recheck": {
+        "at": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 717,
+      "title": "フラグメントだけのカスタムマテリアルがインスタンス経路で描かれない",
+      "sketch": "2026/0816-atelier",
+      "ourIssue": 17,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "H6.customMaterialInstanced"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "CLOSED だが v0.9.0 では再現する。main（b30cb67）では修正済み・未リリース"
+      },
+      "recheck": {
+        "at": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 527,
+      "title": "specular() / emissive() のグレー値だけが colorMode のレンジに従わない",
+      "sketch": "2026/0816-atelier",
+      "ourIssue": 17,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "V10b.emissiveColorModeScale"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "CLOSED だが v0.9.0 では再現する。emissive(102) で真っ白。main では修正済み・未リリース"
+      },
+      "recheck": {
+        "at": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 777,
+      "title": "ortho() の省略時の範囲が既定カメラと噛み合わず、被写体が画面の隅へ寄る",
+      "sketch": "2026/0816-atelier",
+      "ourIssue": 17,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "D2b.orthoDefaultOffCenter"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "画面中心に置いた板の中心が (-640, +360) px ずれる（ちょうど半画面）"
+      },
+      "recheck": {
+        "at": null
       }
     }
   ]
