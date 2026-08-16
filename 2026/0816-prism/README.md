@@ -13,7 +13,13 @@ so it can measure colour without touching the artwork.
 Verification record: [metaphor-sketches#14](https://github.com/shinyaoguri/metaphor-sketches/issues/14).
 Pinned to **metaphor 0.9.0** (`Package.resolved`).
 
-![Dispersion](https://i.gyazo.com/baf87c2929ee5e8a9b4013a9b4001e00.png)
+![Dispersion sweeping into total internal reflection](https://i.gyazo.com/8346a81388e93825d14a4ab082aa997d.gif)
+
+The sketch window only, 8.5 s of the unattended swing. The prism turns, the fan sweeps down the
+screen, and past the middle the angle of incidence drops below the critical angle — the violet end
+goes first, then the whole spectrum, and the beam stops coming out at all. The label at the bottom
+counts it (`全反射で欠けた波長 72/72` at 26°). Nothing is faded out by hand; that is the
+total-internal-reflection condition in `Optics.deviation` returning `nil`.
 
 ## Run
 
