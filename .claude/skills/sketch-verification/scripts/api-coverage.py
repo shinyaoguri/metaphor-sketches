@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""既存作品が metaphor の公開 API をどれだけ通したかを測る。
+"""既存作品が metaphor の公開 API をどれだけ名前として通したかを測る。
 
-作品を作ることは API のカバレッジ選択なので、次に何を作るかを決める前にこれを走らせて
-「まだ誰も触っていない領域」を選ぶ。
+**これは「未使用リスト」であって「やることリスト」ではない。**
+誰かが 1 度通したからといってその API が正しいわけではなく、引数・順番・規模・
+他モジュールとの併用を変えれば別の検証になる。実際 #755 も #756 も、単体では
+素直に見える API が組み合わせで壊れていた事例だった。
+
+使い道は「手つかずの領域を見落とさないための補助」。着手時と完了時に検証 issue へ
+貼っておくと、なぜその領域を選んだのかと、次に何が残っているのかが同じ場所に残る。
 
     .claude/skills/sketch-verification/scripts/api-coverage.py            # 未使用をモジュール別に要約
     .claude/skills/sketch-verification/scripts/api-coverage.py --list Physics   # そのモジュールの未使用を全部出す
@@ -106,13 +111,14 @@ def main() -> None:
                 print(f"  {name}")
         return
 
-    print("未使用が多い順（= 次に作品で通す価値がある領域）:")
+    print("未使用が多い順（手つかずの領域。ただし使用済み = 検証済みではない）:")
     for module, names in sorted(by_module.items(), key=lambda kv: -len(kv[1])):
         head = ", ".join(names[:8])
         more = f" ほか {len(names) - 8} 個" if len(names) > 8 else ""
         print(f"  {module:22} {len(names):4}  {head}{more}")
     print("\n特定モジュールの全件は --list <モジュール名> で出す")
     print("※ 名前の一致で数えるだけなので絶対数は抽出方法に依る。領域の当たりを付けるための相対値として読む")
+    print("※ 使用済みの API も、別の引数・規模・組み合わせで当て直す価値がある")
 
 
 if __name__ == "__main__":

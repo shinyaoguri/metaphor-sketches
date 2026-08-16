@@ -1,6 +1,6 @@
 ---
 name: sketch-verification
-description: "このスケッチブックで新しい作品を作りながら metaphor を検証する一連の手順 (何を作るか決める → 着手時に検証 issue を立てる → 検査を内蔵した作品を書く → 観測して切り分ける → 証跡を添えて記録する → 上流へ起票する)。Use when starting a new sketch in this repository, when asked to verify metaphor APIs through a work, or when recording verification results for an existing sketch."
+description: "このスケッチブックで新しい作品を作りながら metaphor を検証する一連の手順 (何を作るか決める → 着手時に検証 issue を立てる → 作品として成立させつつ検査を内蔵する → 観測して切り分ける → 証跡を添えて記録する → 上流へ起票する)。Use when starting a new sketch in this repository, when asked to verify metaphor APIs through a work, or when recording verification results for an existing sketch."
 ---
 
 作品を作ることがそのまま metaphor の検証になる、というのがこのリポジトリの前提
@@ -17,7 +17,7 @@ description: "このスケッチブックで新しい作品を作りながら me
 #10 では実装と計測を先に進めてしまい、ユーザーに指摘されるまで issue が無かった。
 後から書き戻すと、**何を検証するつもりだったのか**（着手時の意図）と
 **何が分かったのか**（結果）の区別が付かなくなる。issue が先だと、
-API 表がそのまま作業の チェックリストになるという実利もある。
+API 表がそのまま作業のチェックリストになるという実利もある。
 
 ```bash
 gh issue create --title "2026/<MMDD>-<名前> の検証記録" --label verification --body-file <本文>
@@ -25,23 +25,64 @@ gh issue create --title "2026/<MMDD>-<名前> の検証記録" --label verificat
 
 本文は `.github/ISSUE_TEMPLATE/sketch-verification.md` の見出しに合わせる。
 **「この作品で検証できる metaphor の API・機能」の表を、結果列を空にして先に埋める。**
+このとき **`api-coverage.py` の出力（着手前の状態）も一緒に貼る**。
+なぜその領域を選んだのかが後から辿れるし、完了後の出力と並べれば差分が見える。
 
 ## 1. 何を作るか決める
-
-作品づくりは API のカバレッジ選択なので、まだ誰も通していない領域から選ぶ。
 
 ```bash
 .claude/skills/sketch-verification/scripts/api-coverage.py            # 未使用をモジュール別に要約
 .claude/skills/sketch-verification/scripts/api-coverage.py --list MPS # そのモジュールの未使用を全件
 ```
 
-丸ごと手つかずのモジュールが 1 つ残っていれば、それを主題にするのが素直。
+**この出力は「未使用リスト」であって「やることリスト」ではない。**
+名前の一致で数えているだけなので、
+
+- **誰かが 1 度通した = その API が正しいということではない。**
+  通し方が浅かったかもしれないし、別の引数・別の順番・別の規模では壊れるかもしれない
+- **単体では正しくても、組み合わせで壊れる。**
+  #10 で見つかった穴はどちらも組み合わせ由来だった。`restitution` / `friction` は
+  doc も型も素直なのに、**位置補正と速度の導出を組み合わせた瞬間**に死ぬ
+  （[#755](https://github.com/shinyaoguri/metaphor/issues/755)）。
+  タイムステップの問題も、`Physics2D` 単体ではなく
+  **サブシステム経由で実フレーム時間を渡す経路**と組み合わせて初めて出る
+  （[#756](https://github.com/shinyaoguri/metaphor/issues/756)）
+- **規模を変えると出る穴がある。** 短い鎖なら既定の `iterations: 4` で足りるが、
+  22 リンクでは張力が伝わりきらず伸びて絡む
+
+なので、既に「使用済み」の API こそ**別の角度から繰り返し当てにいく**。
+同じ API でも、退化した引数・逆順・極端な規模・他モジュールとの併用・長時間の連続稼働は
+別の検証になる（0816-adversary は「敵対的に組み合わせること自体」を主題にした作品）。
+
+カバレッジ出力は、**手つかずの領域を見落とさないための補助**として使う。
+丸ごと未使用のモジュールが残っていればそれを主題にするのは素直だし、
 **橋渡しの API を持つモジュールは対で選ぶ**（例: MetaphorPhysics と MetaphorSceneGraph は
 `Node.syncFromPhysics` で繋がっており、片方だけでは橋を検証できない）。
 
-どの領域を狙うかは作品の意図に依るので、候補が複数あればユーザーに選んでもらう。
+どの領域をどの角度から狙うかは作品の意図に依るので、候補が複数あればユーザーに選んでもらう。
 
-## 2. 検査を内蔵した作品を書く
+## 2. 作品として成立させる
+
+**機能チェックの寄せ集めで終わらせない。** ゲーム・アート・インタラクティブコンテンツとして
+一定の形になっていることを、実装中つねに意識する。ここが崩れると検証の質そのものが落ちる。
+
+理由は美観ではなく実利で、**本番でしか出ない穴は、作品として成立していないと踏めない**。
+
+- 見られる状態を保つから、**見た目の異常に気付ける**（#10 の Y 軸の食い違いは絵で分かった）
+- 時間的な構成があるから、**寿命・遷移・リークが出る**（場面の巡回、アセットの入れ替え）
+- 操作できるから、**入力経路が検証される**
+- 負荷が現実的だから、**規模由来の穴が出る**（22 リンクの鎖、330 体の格子、240 体の群れ）
+- 30 分見ていられるものだから、**ソークが意味を持つ**
+
+判断の目安: **その作品を単体で人に見せられるか。** 見せられないなら、検証としても弱い。
+「検査盤そのものを作品の主題にする」作り方は成立する（0816-adversary は FAIL が赤く残る
+画面自体が主題）が、それは形を捨てたのではなく、別の形を選んだということ。
+
+作品の意図と想定する動作は README と `PROJECT_BRIEF.md` に書く。
+実装の作法は作品ディレクトリの `AGENTS.md` が正本。**metaphor の API を書く前に必ず
+その作品の `api_reference` を引く**（作品ごとに依存バージョンが違う）。
+
+## 3. 検査を内蔵する
 
 **スクリーンショットではなく frame.json を一次証拠にする。**
 `setup()` で 1 回だけ走る決定論的な検査群を作り、判定を `probe("check.<ID>", ...)` に出す
@@ -54,12 +95,10 @@ gh issue create --title "2026/<MMDD>-<名前> の検証記録" --label verificat
 - **`print` は `fflush(stdout)` とセットで**。パイプへ流すとブロックバッファされ、
   「動いていない」と誤診する（#10 で実際に一度誤診した）
 
-作品自体は作品として成立させる。検査盤そのものを主題にする作り方もある（0816-adversary）。
+検査は作品の邪魔をしない位置に置く。起動を何秒も止めるほど重い検査は削る
+（ホットリロードのたびに走るので、観測 → 編集 → 再観測のループが鈍る）。
 
-実装の作法は作品ディレクトリの `AGENTS.md` が正本。**metaphor の API を書く前に必ず
-その作品の `api_reference` を引く**（作品ごとに依存バージョンが違う）。
-
-## 3. 走らせて観測する
+## 4. 走らせて観測する
 
 `metaphor` MCP が使えないセッションもある。そのときは `swift build` と `swift run`、
 それに作品側へ仕込んだ環境変数の口で足りる。#10 では次の 4 つを用意した。
@@ -75,10 +114,10 @@ gh issue create --title "2026/<MMDD>-<名前> の検証記録" --label verificat
 v0.9.0 の `step(dt, iterations: -1)` がこれで、常時実行して起動不能になった。
 
 書き出し API には非対称がある。**`saveFrame(_:)` は渡した名前に無条件で `~/Desktop/` を
-前置する**ので絶対パスは無言で捨てられる（[metaphor#757](https://github.com/shinyaoguri/metaphor/issues/757)）。
+前置する**ので絶対パスは無言で捨てられる（[#757](https://github.com/shinyaoguri/metaphor/issues/757)）。
 `beginFrameRecord(directory:)` は絶対パスを尊重する。
 
-## 4. 上流へ投げる前に切り分ける
+## 5. 上流へ投げる前に切り分ける
 
 **「ライブラリがおかしい」と思ったら、まず条件を 1 つだけ変えた対照実験を組む。**
 
@@ -108,7 +147,7 @@ gh issue list --repo shinyaoguri/metaphor --state all --search "<キーワード
 [#581](https://github.com/shinyaoguri/metaphor/issues/581) / [#504](https://github.com/shinyaoguri/metaphor/issues/504)）。
 ローカルの metaphor チェックアウトと該当関数を diff して確かめてから書く。
 
-## 5. 証跡を添える
+## 6. 証跡を添える
 
 見た目を伴うものには静止画、**動きが分からないと正誤を判定できないものには GIF も**。
 手順は `gyazo-capture` スキルが正本。このリポジトリで効いた使い分け:
@@ -124,19 +163,21 @@ gh issue list --repo shinyaoguri/metaphor --state all --search "<キーワード
 添えるときは**撮影範囲と、どこを見てほしいか**を必ず本文に書く。
 上流の Issue にも同じ規則で添える（#755 には pit の画像を追記した）。
 
-## 6. ソーク
+## 7. ソーク
 
 30 分の無人稼働で劣化とリークを見る。`2026/0816-marionette/tools/probe.sh soak 1800` が雛形
 （release ビルド → 10 秒ごとに RSS と CPU を CSV へ → 前半平均と後半平均を比べる）。
 
 生成物は `.probe-out/` に置き、**リポジトリにはコミットしない**。
 
-## 7. 仕上げ
+## 8. 仕上げ
 
 1. issue へ **API ごとに**結果を追記する（表の結果列を埋める）。動作確認の詳細はこの issue が一次記録
-2. 見つけた問題を metaphor / metaphor-cli へ起票し、issue から番号でリンクする
-3. README の索引表に 1 行足す（検証記録と踏んだ Issue へのリンク、実装側の学び）
-4. 作品の README に、実測値と「コードを読む人向けの注意」を残す
-5. 1 作品 1 コミットで main へ直 push（このリポジトリは PR レス運用）
+2. **`api-coverage.py` の完了後の出力も貼る。** 着手前と並べれば、この作品で何がどれだけ増えたかと、
+   **次に残っている領域**が同じ場所に残る
+3. 見つけた問題を metaphor / metaphor-cli へ起票し、issue から番号でリンクする
+4. README の索引表に 1 行足す（検証記録と踏んだ Issue へのリンク、実装側の学び）
+5. 作品の README に、実測値と「コードを読む人向けの注意」を残す
+6. 1 作品 1 コミットで main へ直 push（このリポジトリは PR レス運用）
 
 Issue・PR へのコメントには署名を付ける（付け忘れはフックが差し戻す）。
