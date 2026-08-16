@@ -1,0 +1,130 @@
+# AGENTS.md
+
+This project is a metaphor sketch generated from the `2d` template.
+metaphor is built for AI-assisted creative coding: you can **observe the running
+sketch, edit, and re-observe** in a tight loop. Read this file first.
+
+## The development loop (observe → edit → verify)
+
+1. The human starts a live session once: `metaphor watch --viewer`
+   (a window opens; the sketch rebuilds on every file save).
+2. You (the AI) work through the **`metaphor` MCP server**:
+   - `snapshot` — capture the current frame as PNG + internal state
+     (`frame.json`: frame / time / `probe()` values / blank warnings).
+   - `build_status` — did the latest `swift build` succeed? Check this after every edit.
+   - `api_reference` — read the metaphor API docs (see below). Use before new APIs.
+   - `input` — send mouse/keyboard events to the running sketch (standalone mode only).
+3. Edit `Sources/Sketch0816ProbeFrameloop/App.swift`, then `build_status`, then `snapshot`.
+   Repeat. If a snapshot looks stale, `build_status` tells you whether your edit compiled.
+
+## MCP setup
+
+`.mcp.json` is committed in this project, so Claude Code / Cursor / VS Code
+auto-connect to the `metaphor` MCP server — no setup needed.
+
+For other clients, register once:
+
+```bash
+claude mcp add metaphor -- metaphor mcp .
+```
+
+> Start `metaphor watch` **before** opening your AI client, so the MCP server
+> attaches to the live viewer session instead of spawning its own headless instance.
+
+## API reference
+
+Prefer the **`api_reference` MCP tool** — it always reads the docs of the exact
+metaphor version this project depends on:
+
+- `api_reference doc=sketch` — compact sketch-authoring guide (start here).
+- `api_reference doc=full` — full generated API reference (use `grep` to narrow).
+- `api_reference doc=examples` — index of nearby examples to copy patterns from.
+
+Fallback (if MCP is unavailable): read these files directly from the metaphor
+library at `.build/checkouts/metaphor`:
+
+- `.build/checkouts/metaphor/llms-sketch.txt`
+- `.build/checkouts/metaphor/llms.txt`
+- `.build/checkouts/metaphor/docs/ai/examples-index.md`
+
+(For a release-pinned dependency this path appears once dependencies are
+resolved; `metaphor new` resolves them for you, or run `swift package resolve`.)
+
+## Run commands
+
+```bash
+metaphor run            # build and launch once
+metaphor watch --viewer # live-reload window for the observe→edit loop
+swift run               # plain SwiftPM run
+```
+
+Use `metaphor doctor` if the sketch does not build or launch.
+
+## Project shape
+
+- Entry point: `Sources/Sketch0816ProbeFrameloop/App.swift`
+- Images: `Sources/Sketch0816ProbeFrameloop/Resources/Images/`
+- Models: `Sources/Sketch0816ProbeFrameloop/Resources/Models/`
+- Shaders: `Sources/Sketch0816ProbeFrameloop/Resources/Shaders/`
+- Presets: `Sources/Sketch0816ProbeFrameloop/Presets/default.json`
+- Creative brief: `PROJECT_BRIEF.md`
+
+## Observing internal state with probe()
+
+Call `probe("name", value)` inside `draw()` to surface a value to the AI. It shows
+up in `snapshot`'s `frame.json` (and is a no-op when no probe is active, so it is
+safe to leave in). Use it to make state you care about observable, e.g.:
+
+```swift
+probe("particles.count", particles.count)
+probe("mouse", [mouseX, mouseY])
+```
+
+The `frame.json` that `snapshot` returns looks like this — `probe()` values appear
+under `custom`:
+
+```json
+{
+  "schemaVersion": 4,
+  "id": "01HXYZABCDEF0123456789",
+  "frame": 120,
+  "time": 2.5,
+  "size": { "width": 1280, "height": 720 },
+  "custom": { "particles.count": 500, "mouse": [640, 360] },
+  "warnings": []
+}
+```
+
+This example is intentionally minimal; snapshots may carry more fields (color
+`stats`, measured `performance`, `customTypes`, …). The canonical schema is
+[`contract/frame.schema.json`](https://github.com/shinyaoguri/metaphor/blob/main/contract/frame.schema.json)
+in the metaphor repositories.
+
+Probe is enabled automatically under `metaphor watch` and `metaphor mcp`.
+
+## AI coding guidance
+
+- Language policy: this file and README.md are written in English (AI/tooling-facing),
+  while the code comments in the generated `App.swift` are Japanese (sketch-author-facing).
+  This split is intentional — when editing code, write comments in Japanese to match,
+  unless the user asks for another language.
+- Prefer `import metaphor` and Processing-style sketch APIs before reaching for lower-level modules.
+- Confirm an API with `api_reference` before inventing helpers; copy from `doc=examples`.
+- Keep `setup()` for initialization, loading assets, configuring cameras, and allocating reusable resources.
+- Keep `draw()` frame-safe: avoid repeated disk I/O, heavy allocation, or blocking work.
+- When changing visuals, preserve the sketch's stated intent in `PROJECT_BRIEF.md`.
+- If a build fails, fix the first compiler error before making broad rewrites (`build_status` shows it).
+
+## Feedback and bug reports
+
+metaphor is still evolving — problems and rough edges are expected. If you (or the
+user) hit a bug, a confusing error, unclear documentation, or have an improvement
+idea, please report it casually — small findings are welcome:
+
+- **metaphor (library: drawing, API, rendering)**: https://github.com/shinyaoguri/metaphor/issues
+- **metaphor-cli (CLI: new/watch/mcp, templates, this file)**: https://github.com/shinyaoguri/metaphor-cli/issues
+
+Include the sketch code (or a minimal repro), the exact error output, and
+`metaphor doctor` output. As an AI agent you can file it directly with
+`gh issue create` when the user agrees — offer to do so when you notice an issue
+that looks like a library or CLI problem rather than a sketch problem.

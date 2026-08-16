@@ -20,6 +20,10 @@
     "2026/0816-sounding": {
       "verdictCommand": "tools/probe.sh check",
       "verdictPattern": "^(?P<verdict>PASS|FAIL)\\t(?P<id>\\S+)"
+    },
+    "2026/0816-escapement": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
     }
   },
   "entries": [
@@ -666,6 +670,98 @@
         "against": null,
         "verdict": null,
         "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 793,
+      "title": "noLoop() → loop() の再開直後に deltaTime が止めていた実時間ぶん跳ねる",
+      "sketch": "2026/0816-escapement",
+      "ourIssue": 12,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "L5.resumeDelta"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "0.8 秒止めて再開すると最初の deltaTime が 0.8554s（1 フレーム 0.0167s の 51 倍）。main（db7bd76）でも再現。最小再現は 2026/0816-probe-frameloop の PROBE=resume"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 794,
+      "title": "Constants の RETURN / TAB / BACKSPACE / CONTROL が import Foundation と併用すると曖昧になる",
+      "sketch": "2026/0816-escapement",
+      "ourIssue": 12,
+      "oracle": {
+        "kind": "manual",
+        "how": "tools/collide.sh を走らせる。『import Foundation + import metaphor』側が 0/21 になれば直っている（報告時は 4/21）"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "RETURN / TAB / BACKSPACE / CONTROL が sys/tty.h のマクロと衝突。metaphor.RETURN と修飾しても絞れない（Foundation を @_exported しているため）。型注釈だけが回避策"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 798,
+      "title": "createGraphics / createGraphics3D が 0・負のサイズで nil を返さずプロセスごと落ちる",
+      "sketch": "2026/0816-escapement",
+      "ourIssue": 12,
+      "oracle": {
+        "kind": "manual",
+        "how": "tools/probe.sh trap graphicsZero / graphicsNegative / graphics3DZero を走らせる。Abort trap で落ちず『createGraphics(0,0)=nil』が出れば直っている（比較対象: imageZero は元から nil を返す）"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "MTLTextureDescriptor has width/height of zero のアサーションで Abort trap: 6。createImage(0,0) は nil を返すので、同じ形の API で挙動が割れている。main（db7bd76）でも再現"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 522,
+      "title": "pmouseX / pmouseY が「前フレーム」ではなく 2 フレーム前の座標を返す",
+      "sketch": "2026/0816-escapement",
+      "ourIssue": 12,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "I3.pmouse"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "こちらの起票ではなく既出（2026-08-12 に CLOSED）。v0.9.0 では未リリースのため再現する。main では PASS になることを swift package edit で A/B 済み。最小再現は 2026/0816-probe-frameloop の PROBE=pmouse"
+      },
+      "recheck": {
+        "at": "2026-08-16",
+        "against": "main (db7bd76)",
+        "verdict": "PASS",
+        "note": "InputManager.endFrame() の追加（PR #534）で lag 2 → 1。0.9.0 では FAIL のまま"
       }
     }
   ]
