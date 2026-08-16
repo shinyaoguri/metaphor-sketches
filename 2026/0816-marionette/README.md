@@ -82,4 +82,15 @@ resonance instead.
   radii are kept below half the link spacing.
 - `saveFrame(name)` always writes to `~/Desktop/`; an absolute path silently produces no file.
 
-Verification record: [issue in this repository](https://github.com/shinyaoguri/metaphor-sketches/issues).
+## Soak
+
+30 minutes, release build, 180 samples at 10 s intervals (`tools/probe.sh soak 1800`):
+RSS 73.2 MB → 74.1 MB (**+0.9 MB**), CPU 15.7 % → 16.8 %. No leak, no warnings, no NaN — and the
+self-check returns the same 13/18 in release as in debug. Over that run `pit` created and destroyed
+roughly 2800 bodies and nodes.
+
+Verification record: [metaphor-sketches#10](https://github.com/shinyaoguri/metaphor-sketches/issues/10).
+Upstream issues found here: [metaphor#755](https://github.com/shinyaoguri/metaphor/issues/755)
+(restitution / friction inert), [metaphor#756](https://github.com/shinyaoguri/metaphor/issues/756)
+(timestep jitter, velocity units), [metaphor#757](https://github.com/shinyaoguri/metaphor/issues/757)
+(`saveFrame` path).
