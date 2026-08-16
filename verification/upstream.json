@@ -24,6 +24,10 @@
     "2026/0816-escapement": {
       "verdictCommand": "tools/probe.sh check",
       "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
+    },
+    "2026/0816-prism": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
     }
   },
   "entries": [
@@ -762,6 +766,54 @@
         "against": "main (db7bd76)",
         "verdict": "PASS",
         "note": "InputManager.endFrame() の追加（PR #534）で lag 2 → 1。0.9.0 では FAIL のまま"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 799,
+      "title": "Color(hex: String) が桁数を検証せず \"#FFF\" が白でなく青になる",
+      "sketch": "2026/0816-prism",
+      "ourIssue": 14,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "A12.hexStringInvalid"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "形式外 8 件中 4 件が色として通る（\"#F\" / \"#FFF\" / \"#12345\" / \"#1234567\"）。main 28b44e5 でも同じ実装"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 800,
+      "title": "BlendMode.subtract だけがアルファも減算し、描いた領域の α が 0 になる",
+      "sketch": "2026/0816-prism",
+      "ourIssue": 14,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "B9.blendAlpha"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "不透明どうしの subtract で α=0.000。他 9 モードは 1.000。RGB は dst-src で正しい。main 28b44e5 でも同じ実装"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
       }
     }
   ]
