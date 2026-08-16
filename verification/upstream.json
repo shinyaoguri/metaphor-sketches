@@ -44,6 +44,10 @@
     "2026/0816-encore": {
       "verdictCommand": "tools/probe.sh check",
       "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
+    },
+    "2026/0816-emulsion": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^(?P<verdict>PASS|FAIL|LOOK)\\s+(?P<id>\\S+)"
     }
   },
   "entries": [
@@ -1116,6 +1120,177 @@
         "metaphor": "0.9.0",
         "verdict": "FAIL",
         "note": "T2b が FAIL（delay 待ちと未 start がどちらも (false,false)）。T8 / T15 / T7 は挙動としては PASS で、doc 側の追記待ちなので判定には使わない"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 829,
+      "title": "background() の α<1 が呼んだフレームに効かず、オフスクリーンを透明で始められない",
+      "sketch": "2026/0816-emulsion",
+      "ourIssue": 19,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "L6.clearToTransparent",
+          "L8.transparentClearLag"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "白で埋めた層に background(0,0,0,0) を 2 回: 1 回目 (1.000,1.000,1.000,a=1.000) のまま / 2 回目で (0.000,0.000,0.000,a=0.000)"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 830,
+      "title": "Graphics3D に background() が無く、下地が不透明な黒で固定される",
+      "sketch": "2026/0816-emulsion",
+      "ourIssue": 19,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "L3b.clearAlpha"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "図形を 1 つ置いたフレームの隅 = (0.000,0.000,0.000,a=1.000)。α を 0 にする口が API に無い"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 831,
+      "title": "MergePass(.alpha) が premultiplied な層に α を 2 回掛ける",
+      "sketch": "2026/0816-emulsion",
+      "ourIssue": 19,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "M4.alpha"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "A=(0.600,0.200,0.102) に premultiplied な B=(0.102,0.400,0.200,a=0.502) を .alpha で重ねて実測 (0.349,0.302,0.153)。正しくは (0.401,0.500,0.251)"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 832,
+      "title": "同一フレームでは呼び出し順に関わらず 3D が 2D の後に塗られることが未文書",
+      "sketch": "2026/0816-emulsion",
+      "ourIssue": 19,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "X2b.twoDOverThreeD",
+          "X5.depthOrPassOrder",
+          "X6.loadPixelsAsSplit"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "3D の後の 2D は重なる範囲で隠れる。箱を z=0 → -600 にしても変わらないので深度ではなくパス順。loadPixels() を挟むと上に出る"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 833,
+      "title": "RenderGraphCompose の「多パスエフェクトが崩れる」注記が 0.9.0 で再現しない",
+      "sketch": "2026/0816-emulsion",
+      "ourIssue": 19,
+      "oracle": {
+        "kind": "manual",
+        "how": "tools/probe.sh trap multipass-effect と trap multipass-merged を走らせ、円の中心が明るい黄なら崩れていない。注記が落ちたか条件付きに書き換わったかを Examples/Samples/RenderGraphCompose/RenderGraphCompose/App.swift で見る"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "PASS",
+        "note": "trap multipass-effect = (1.000,1.000,0.773) / trap multipass-merged = (1.000,1.000,0.969)。どちらもブルームが正常に出る"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 845,
+      "title": "image(pg, …) が premultiplied な Graphics に α を掛け直す",
+      "sketch": "2026/0816-emulsion",
+      "ourIssue": 19,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "M7.twoCompositors",
+          "M7b.imageOverAlpha"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "MergePass(.add)=(0.702,0.600,0.302) に対し image()+blendMode(.additive)=(0.651,0.400,0.204)。.alpha でも同じ形で α が二重に掛かる"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 846,
+      "title": "text() が fill の α を無視する（既存 issue へ実測を追記）",
+      "sketch": "2026/0816-emulsion",
+      "ourIssue": 19,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "L10.textRespectsAlpha",
+          "X7.mainCanvasTextAlpha"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "黒地に fill(255,255,255,α) の文字の最明画素が α=0/128/255 すべて 1.000（応答が平ら）。同じ α=0 で rect は 0 画素"
       },
       "recheck": {
         "at": null,
