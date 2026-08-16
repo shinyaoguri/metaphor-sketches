@@ -48,6 +48,10 @@
     "2026/0816-emulsion": {
       "verdictCommand": "tools/probe.sh check",
       "verdictPattern": "^(?P<verdict>PASS|FAIL|LOOK)\\s+(?P<id>\\S+)"
+    },
+    "2026/0816-triptych": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^\\[(?P<id>[^\\]]+)\\]\\s+(?P<verdict>PASS|FAIL)"
     }
   },
   "entries": [
@@ -1291,6 +1295,97 @@
         "metaphor": "0.9.0",
         "verdict": "FAIL",
         "note": "黒地に fill(255,255,255,α) の文字の最明画素が α=0/128/255 すべて 1.000（応答が平ら）。同じ α=0 で rect は 0 画素"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 835,
+      "title": "セカンダリウィンドウを閉じたあと開き直すとプロセスが SIGSEGV で落ちる",
+      "sketch": "2026/0816-triptych",
+      "ourIssue": 20,
+      "oracle": {
+        "kind": "manual",
+        "how": "2026/0816-probe-windowclose で `PROBE_MODE=reopen swift run` が exit 0 で完走すれば直っている。あわせて 2026/0816-triptych の `TRIPTYCH_NOWORKAROUND=1 swift run` が t=42s の開き直しを越えれば、作品側の当て木 (WindowCrashWorkaround) を外せる"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "0816-probe-windowclose の PROBE_MODE=reopen / openclose / burst / cycle が 3/3 で exit 139。isReleasedWhenClosed=false を外から立てた *-fixed は 3/3 で exit 0"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 836,
+      "title": "セカンダリウィンドウの context.time がウィンドウ生成起点で doc と食い違う",
+      "sketch": "2026/0816-triptych",
+      "ourIssue": 20,
+      "oracle": {
+        "kind": "manual",
+        "how": "`tools/probe.sh trace 60` の [trace] 行を見る。t=42s の開き直しの直後に 翼の own= が 0 付近へ戻らず、Δ が -42000ms 付近ではなく 0 付近のままなら直っている"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "翼を開き直すと ctx.time が 0 から始まり、共有時計との差が Δ=-42009.7ms になる (42 秒ぶんの巻き戻り)"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 837,
+      "title": "セカンダリウィンドウの位置を指定できず windowCounter が減らない",
+      "sketch": "2026/0816-triptych",
+      "ourIssue": 20,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "L5",
+          "W7"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "同じ config で 3 回開き直した位置が (1016,571) → (1046,541) → (1076,511)、1 回あたり (30,-30)px"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 842,
+      "title": "退化した SketchWindowConfig で createWindow が nil を返さず abort する",
+      "sketch": "2026/0816-triptych",
+      "ourIssue": 20,
+      "oracle": {
+        "kind": "manual",
+        "how": "`tools/probe.sh trap zero` / `trap negative` / `trap huge` が abort せず `[W8] trap=… → nil を返した` を出せば直っている"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "trap zero / negative / huge がいずれも Metal のアサーションで exit 134。windowScale:0 は 0×0 のウィンドウが isOpen=true で開く"
       },
       "recheck": {
         "at": null,
