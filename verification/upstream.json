@@ -24,6 +24,10 @@
     "2026/0816-escapement": {
       "verdictCommand": "tools/probe.sh check",
       "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
+    },
+    "2026/0816-gamut": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
     }
   },
   "entries": [
@@ -762,6 +766,45 @@
         "against": "main (db7bd76)",
         "verdict": "PASS",
         "note": "InputManager.endFrame() の追加（PR #534）で lag 2 → 1。0.9.0 では FAIL のまま"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 801,
+      "title": "blendMode の multiply / screen / lightest / darkest が fill の α を無視する（結果の α も壊れる）",
+      "sketch": "2026/0816-gamut",
+      "ourIssue": 13,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "A0.multiply",
+          "A0.screen",
+          "A0.lightest",
+          "A0.darkest",
+          "A5.multiply",
+          "A5.screen",
+          "A5.subtract",
+          "A5.lightest",
+          "A5.darkest",
+          "A2.opaqueResult100.subtract",
+          "A3.opaqueResult.multiply",
+          "A3.opaqueResult.darkest",
+          "A4.opaqueResult50.multiply",
+          "A4.opaqueResult50.subtract",
+          "A4.opaqueResult50.darkest",
+          "R2.mainBlend.a0"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "α=0 の src を重ねても下地が変わる（multiply/screen/lightest/darkest）。α=0.5 が α=1 と 1 ビットも変わらない。subtract は α がクランプ前に掛かる。結果アルファも multiply/darkest が src.a×dst.a、subtract が dst.a−src.a で、subtract は α=1 で塗ると結果が完全に透明になる。main（28b44e5）でも BlendMode 周辺に差分なしで再現。最小再現は 2026/0816-probe-blendalpha"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
       }
     }
   ]
