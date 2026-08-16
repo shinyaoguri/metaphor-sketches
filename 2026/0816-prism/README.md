@@ -56,7 +56,13 @@ stdout and to `probe("check.<ID>", …)`.
 | B | `Spectrometer.swift` | colour **after** the pipeline — colour modes, blend modes, alpha, tint. Offscreen, so the artwork stays clean |
 | C | `Runtime.swift` | things that need more than one frame — gradients, `pushStyle`, post effects |
 
-Two of them fail, and both are upstream bugs found by this sketch:
+[0816-gamut](../0816-gamut/) reached the same surface from the other side at the same time —
+additive against subtractive mixing — and found a *different* alpha bug in the same switch
+statement: [metaphor#801](https://github.com/shinyaoguri/metaphor/issues/801), where
+`multiply` / `screen` / `lightest` / `darkest` ignore the alpha of the incoming `fill`.
+This one is about the alpha that comes *out*. Worth reading the two together.
+
+Two checks here fail, and both are upstream bugs found by this sketch:
 
 - [metaphor#799](https://github.com/shinyaoguri/metaphor/issues/799) — `Color(hex: String)` does not
   check the digit count, so `"#FFF"` silently becomes blue instead of white (`A12`)
