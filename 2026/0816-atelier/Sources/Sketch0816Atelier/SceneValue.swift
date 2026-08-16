@@ -201,6 +201,25 @@ extension Sketch0816Atelier {
 
     // MARK: 測る
 
+    /// 標本の板の中心（ワールド）。
+    private func plateCenter(_ x: Float) -> SIMD3<Float> { SIMD3(x, axis.y, 0) }
+
+    /// 既定カメラの目。陰影の解析に要る（V ベクトル）。
+    private var eyePoint: SIMD3<Float> { standardOptics.eye }
+
+    /// 板 1 枚ぶんの期待色を、解析側の Blinn-Phong で出す。
+    ///
+    /// **判定はすべてこの 1 か所を通す。** 場面ごとに式を書き下すと、
+    /// 検査側の写し間違いが「ライブラリの穴」に見えてしまう。
+    private func expectedPlate(_ x: Float, normal n: SIMD3<Float> = SIMD3(0, 0, 1),
+                               ambient: Float = Shading.defaultAmbient,
+                               emissive: Float = 0,
+                               lights: [Shading.Light]) -> SIMD3<Float> {
+        let model = Shading(base: ValueSetup.base, ambient: ambient,
+                            emissive: SIMD3(repeating: emissive))
+        return model.color(at: plateCenter(x), normal: n, eye: eyePoint, lights: lights)
+    }
+
     func judgeValueSpecimen(_ i: Int, _ c: Canvas) -> [Finding] {
         let base = ValueSetup.base
         let amb = Shading.defaultAmbient
@@ -219,8 +238,10 @@ extension Sketch0816Atelier {
                         expectColor(left, base, tol: 0.012,
                                     what: "ambientLight(76.5) のみ（ライト 0 本なので fill 色のままが期待）")),
                 Finding("V2b.ambientWithLight", "環境光 + 平行光",
-                        expectColor(right, base * (0.3 + 1.0), tol: 0.02,
-                                    what: "ambient 0.3 + N·L=1")),
+                        expectColor(right,
+                                    expectedPlate(slotX(1, of: 2),
+                                                  lights: [Shading.Light(travel: SIMD3(0, 0, -1))]),
+                                    tol: 0.02, what: "ambient 0.3 + N·L=1")),
             ]
 
         case 2:
@@ -229,7 +250,8 @@ extension Sketch0816Atelier {
             for (k, a) in angles.enumerated() {
                 let got = c.average(around: slotX(k, of: angles.count), axis.y)
                 let ndotl = max(cos(a), 0)      // N=(0,0,1), L=(sin a, 0, cos a)
-                let want = base * (amb + ndotl)
+                let want = expectedPlate(slotX(k, of: angles.count),
+                                         lights: [Shading.Light(travel: SIMD3(-sin(a), 0, -cos(a)))])
                 out.append(Finding("V3\(["a", "b", "c"][k]).directional\(f0(a * 180 / .pi))",
                                    "平行光 \(f0(a * 180 / .pi))°",
                                    expectColor(got, want, tol: 0.02,
@@ -245,18 +267,20 @@ extension Sketch0816Atelier {
             let gotUp = c.average(around: slotX(0, of: 3), axis.y)
             let gotFront = c.average(around: slotX(1, of: 3), axis.y)
             let gotDown = c.average(around: slotX(2, of: 3), axis.y)
-            func want(_ n: SIMD3<Float>) -> SIMD3<Float> {
-                base * (amb + max(dot(n, L), 0) * Shading.defaultLightIntensity)
+            let defaultLight = Shading.Light(travel: Shading.defaultLightDirection,
+                                             intensity: Shading.defaultLightIntensity)
+            func want(_ n: SIMD3<Float>, _ k: Int) -> SIMD3<Float> {
+                expectedPlate(slotX(k, of: 3), normal: n, lights: [defaultLight])
             }
             return [
                 Finding("V4a.lightsUp", "lights() と上向きの面",
-                        expectColor(gotUp, want(up), tol: 0.025,
+                        expectColor(gotUp, want(up, 0), tol: 0.025,
                                     what: "N·L=\(f3(dot(up, L)))（負なら環境光だけ）")),
                 Finding("V4b.lightsFront", "lights() と正対面",
-                        expectColor(gotFront, want(front), tol: 0.025,
+                        expectColor(gotFront, want(front, 1), tol: 0.025,
                                     what: "N·L=\(f3(dot(front, L)))")),
                 Finding("V4c.lightsDown", "lights() と下向きの面",
-                        expectColor(gotDown, want(down), tol: 0.025,
+                        expectColor(gotDown, want(down, 2), tol: 0.025,
                                     what: "N·L=\(f3(dot(down, L)))")),
                 Finding("V4d.lightsFromBelow", "既定の光はどちらから差すか",
                         .look("上向きの面=\(f3(luma(gotUp))) / 正対=\(f3(luma(gotFront)))"
@@ -272,7 +296,10 @@ extension Sketch0816Atelier {
             for (k, f) in falloffs.enumerated() {
                 let got = c.average(around: slotX(k, of: falloffs.count), axis.y)
                 let atten = Shading.attenuation(distance: ValueSetup.lightZ, falloff: f)
-                let want = base * (0.3 + atten)
+                let x = slotX(k, of: falloffs.count)
+                let want = expectedPlate(x, lights: [Shading.Light(
+                    travel: SIMD3(0, 0, -1),
+                    position: SIMD3(x, axis.y, ValueSetup.lightZ), falloff: f)])
                 out.append(Finding("V5\(["a", "b", "c"][k]).pointFalloff\(f3(f))",
                                    "点光源 falloff=\(f3(f))",
                                    expectColor(got, want, tol: 0.02,
@@ -334,12 +361,14 @@ extension Sketch0816Atelier {
             let left = c.average(around: slotX(0, of: 2), axis.y)
             let right = c.average(around: slotX(1, of: 2), axis.y)
             let e = SIMD3<Float>(repeating: ValueSetup.emissiveGray)
+            let wantEmissive = expectedPlate(slotX(1, of: 2), emissive: ValueSetup.emissiveGray,
+                                             lights: [Shading.Light(travel: SIMD3(0, 0, -1))])
             return [
                 Finding("V8.emissiveAlone", "ライト無しの emissive",
                         expectColor(left, base, tol: 0.012,
                                     what: "ライト 0 本（emissive も乗らないのが実装どおり）")),
                 Finding("V8b.emissiveWithLight", "平行光と組んだ emissive",
-                        expectColor(right, base * (amb + 1.0) + e, tol: 0.025,
+                        expectColor(right, wantEmissive, tol: 0.025,
                                     what: "ambient+N·L に emissive \(f3(e.x)) を加算")),
             ]
 
@@ -361,7 +390,8 @@ extension Sketch0816Atelier {
         default:
             let asUnit = c.average(around: slotX(0, of: 2), axis.y)
             let as255 = c.average(around: slotX(1, of: 2), axis.y)
-            let want = clampUnit(base * (0.3 + 1.0) + SIMD3(repeating: ValueSetup.emissiveGray))
+            let want = expectedPlate(slotX(0, of: 2), emissive: ValueSetup.emissiveGray,
+                                     lights: [Shading.Light(travel: SIMD3(0, 0, -1))])
             return [
                 Finding("V10.emissiveUnitScale", "emissive を 0…1 で渡したとき",
                         expectColor(asUnit, want, tol: 0.025,

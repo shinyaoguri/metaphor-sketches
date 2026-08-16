@@ -28,7 +28,7 @@ extension Sketch0816Atelier {
 
         textSize(13)
         fillRGB(Palette.blue)
-        text("標本 \(index + 1) / \(total)", 36, 54)
+        text("標本 \(index + 1) / \(total)  —  \(s.name)", 36, 54)
 
         // 下の帯: 標本名と、何を測っているのか。
         fillRGB(Palette.ink)
