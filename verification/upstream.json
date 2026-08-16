@@ -521,6 +521,50 @@
         "verdict": null,
         "note": "未実施。watch --viewer で高頻度に保存を繰り返す必要がある"
       }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 771,
+      "title": "downstream の metaphor-sketches を回帰検査に組み込む（自己検査の PASS/FAIL まで）",
+      "sketch": "-",
+      "ourIssue": 10,
+      "oracle": {
+        "kind": "manual",
+        "how": "上流の CI に sketches-sweep が入り、週次かリリース前に自己検査が回るようになったか"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "上流に downstream を確かめる手段が無い。v1.0 昇格条件にはあるのに機械的に確認できない"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": "提案したばかり。上流の判断待ち"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor-cli",
+      "issue": 153,
+      "title": "実スケッチに対する run / watch のスモークを入れる",
+      "sketch": "-",
+      "ourIssue": 7,
+      "oracle": {
+        "kind": "manual",
+        "how": "CLI の CI に実スケッチの run / watch スモークが入ったか"
+      },
+      "baseline": {
+        "metaphor": "cli 0.12.0",
+        "verdict": "FAIL",
+        "note": "生成直後の雛形しか検査しておらず、育った実物を動かす検査が無い"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": "提案したばかり。上流の判断待ち"
+      }
     }
   ]
 }
