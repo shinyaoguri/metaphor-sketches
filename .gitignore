@@ -11,6 +11,9 @@ DerivedData/
 Captures/
 Exports/
 
+# 観測の生成物 (ソークの CSV・GIF 用の連番 PNG など。作品ごとの tools/probe.sh が吐く)
+.probe-out/
+
 # 秘密情報・実データの置き場 (成果物やログへ持ち出さない)
 .env
 .env.*

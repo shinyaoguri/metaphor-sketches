@@ -16,6 +16,10 @@
     "2026/0816-adversary": {
       "verdictCommand": "tools/probe.sh cycle",
       "verdictPattern": "^check\\.(?P<id>\\S+)\\t(?P<verdict>PASS|FAIL)"
+    },
+    "2026/0816-sounding": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^(?P<verdict>PASS|FAIL)\\t(?P<id>\\S+)"
     }
   },
   "entries": [
@@ -564,6 +568,104 @@
         "against": null,
         "verdict": null,
         "note": "提案したばかり。上流の判断待ち"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 782,
+      "title": "band(_:) の帯域と volume のスケールが doc と食い違う",
+      "sketch": "2026/0816-sounding",
+      "ourIssue": 11,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "A4.bandBoundaries",
+          "A5.volumeScale"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "band0 の実測が 60–2715Hz（doc は 0–250Hz）/ volume が RMS の 4.000 倍で A≧0.354 で飽和"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 783,
+      "title": "bandEnergy が sampleRate 未設定のとき黙って 0 を返す",
+      "sketch": "2026/0816-sounding",
+      "ourIssue": 11,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "A3.bandEnergyWithoutSampleRate"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "spectrum は生きているのに bandEnergy だけ 0.00000。誤設定と無エネルギーが区別できない"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 785,
+      "title": "sample(x:y:) と sampleGrid が同じ場を指していない",
+      "sketch": "2026/0816-sounding",
+      "ourIssue": 11,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "N8.originScope",
+          "N9.gridMatchesSample"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "sample() が origin/sampleScale を無視。64 点の行で grid と sample の最大差 0.26009"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 786,
+      "title": "llms.txt に doc コメントの Note / Important が出ない",
+      "sketch": "2026/0816-sounding",
+      "ourIssue": 11,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "N15.configResetsComposition"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "config setter が合成を捨てる注記がソースにしか無い。llms.txt は要約 1 行だけ"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
       }
     }
   ]
