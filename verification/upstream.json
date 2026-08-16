@@ -40,6 +40,10 @@
     "2026/0816-atelier": {
       "verdictCommand": "tools/probe.sh check",
       "verdictPattern": "^\\[(?P<id>[^\\]]+)\\]\\s+(?P<verdict>PASS|FAIL|LOOK)"
+    },
+    "2026/0816-encore": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
     }
   },
   "entries": [
@@ -1043,6 +1047,81 @@
       },
       "recheck": {
         "at": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 838,
+      "title": "TweenManager の登録寿命が Tween の実行状態と噛み合っていない（完了後に再演できない / 未開始が滞留する）",
+      "sketch": "2026/0816-encore",
+      "ourIssue": 18,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "M5.restartAfterComplete",
+          "M3.unstartedNeverRemoved",
+          "M10.unstartedRetainedAcrossFrames"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "完了→除去された Tween に start() しても値は from に凍ったまま（isActive=true）。未 start の 600 本は 600 刻み後も count=600"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 839,
+      "title": "NaN / 負の deltaTime が Tween を恒久的に壊す（完了せず、TweenManager からも外れない）",
+      "sketch": "2026/0816-encore",
+      "ourIssue": 18,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "T17.nanDelta",
+          "T18.negativeDelta"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "update(NaN) 1 回で value=nan のまま 600 刻みでも戻らず isComplete=false / count=1。負の dt は from を下回って外挿（50.0000 → -25.0000）"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 840,
+      "title": "yoyo() は repeatCount 無しだと無効・delay は初回のみ・.delaying を外から観測できない",
+      "sketch": "2026/0816-encore",
+      "ourIssue": 18,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "T2b.delayingLooksIdle"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "T2b が FAIL（delay 待ちと未 start がどちらも (false,false)）。T8 / T15 / T7 は挙動としては PASS で、doc 側の追記待ちなので判定には使わない"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
       }
     }
   ]
