@@ -23,11 +23,12 @@ case "${1:-check}" in
 check)
     stop
     sleep 1
-    # 自己検査は setup() で終わるので、その行が出そろったら止めてよい
+    # 静的な検査は setup() で、書き出し系はフレーム 90 で判定が出る。
+    # 「self-check 完了」の行が出たら全部そろっているので止めてよい
     swift run 2>&1 | while IFS= read -r line; do
         printf '%s\n' "$line"
         case "$line" in
-        *"S4.physicsBridge"*)
+        *"self-check 完了"*)
             stop
             break
             ;;

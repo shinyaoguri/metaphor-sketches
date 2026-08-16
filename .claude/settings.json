@@ -13,7 +13,10 @@
       "Bash(metaphor run:*)",
       "Bash(metaphor watch:*)",
       "Bash(metaphor mcp:*)",
-      "Bash(.claude/skills/sketch-verification/scripts/api-coverage.py:*)"
+      "Bash(.claude/skills/sketch-verification/scripts/api-coverage.py:*)",
+      "Bash(.claude/skills/upstream-recheck/scripts/upstream-status.py:*)",
+      "Bash(.claude/skills/upstream-recheck/scripts/recheck.py:*)",
+      "Bash(swift package unedit:*)"
     ]
   }
 }

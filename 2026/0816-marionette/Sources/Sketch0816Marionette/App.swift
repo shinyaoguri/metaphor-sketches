@@ -59,6 +59,9 @@ final class Sketch0816Marionette: Sketch, LinkPainter {
         // パイプへ流すとブロックバッファされるので、確実に出るよう自分で吐き出す
         print(report, terminator: "")
         fflush(stdout)
+        // 書き出し系はフレームを跨がないと判定できないので、描画が始まってから続きを出す
+        print("[marionette] self-check（フレームを跨ぐ検査はこの後）")
+        fflush(stdout)
 
         let kit = MeshKit(
             cell: createSphereMesh(1, detail: 16),
@@ -99,6 +102,7 @@ final class Sketch0816Marionette: Sketch, LinkPainter {
         if showHUD { drawHUD(stage, elapsed: elapsed) }
 
         emitProbes(stage, elapsed: elapsed)
+        runDeferredChecks()
         saveShotIfRequested(stage, elapsed: elapsed)
         recordFramesIfRequested(stage, elapsed: elapsed)
 
@@ -291,6 +295,64 @@ final class Sketch0816Marionette: Sketch, LinkPainter {
         probe("summary.passed", verdicts.filter(\.passed).count)
         probe("summary.failed", verdicts.filter { !$0.passed }.count)
     }
+
+    // MARK: - フレームを跨ぐ検査
+
+    /// E1: `saveFrame(_:)` は渡したパスに書き出すか。
+    ///
+    /// `saveFrame` は次のフレーム終了時に保存を予約するだけなので、`setup()` の
+    /// 静的な検査には置けない。フレーム 30 で一時ディレクトリへ書き出しを頼み、
+    /// フレーム 90 で「頼んだ場所」と「`~/Desktop` へ落ちた場合」の両方を見る。
+    ///
+    /// v0.9.0 は名前へ無条件に `~/Desktop/` を前置するので、絶対パスは
+    /// 存在しない階層になり何も保存されない（[#757]）。上流が直っているかを
+    /// この 1 件で機械的に判定できるようにしてある。
+    private func runDeferredChecks() {
+        guard deferredVerdict == nil else { return }
+
+        let directory = NSTemporaryDirectory() + "marionette-savecheck"
+        let requested = directory + "/e1.png"
+
+        if frameCount == 30 {
+            try? FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+            try? FileManager.default.removeItem(atPath: requested)
+            saveFrame(requested)
+        }
+
+        guard frameCount == 90 else { return }
+
+        let atRequested = FileManager.default.fileExists(atPath: requested)
+        // 前置された場合に落ちる先（`~/Desktop` + 渡した絶対パス）も見ておく
+        let prefixed = NSHomeDirectory() + "/Desktop/" + requested
+        let atPrefixed = FileManager.default.fileExists(atPath: prefixed)
+
+        let detail: String
+        if atRequested {
+            detail = "頼んだ絶対パスに保存された"
+        } else if atPrefixed {
+            detail = "~/Desktop/ を前置した先に保存された（頼んだ場所には無い）"
+        } else {
+            detail = "どこにも保存されなかった（~/Desktop/ 前置で存在しない階層になった）"
+        }
+
+        let verdict = Verdict(id: "E1.saveFramePath", passed: atRequested, detail: detail)
+        deferredVerdict = verdict
+        verdicts.append(verdict)
+        try? FileManager.default.removeItem(atPath: directory)
+        // 前置された先にも書かれることがある（v0.9.0 は途中の階層ごと作る）。
+        // デスクトップに残骸を積まないよう、作られた根から畳む
+        if atPrefixed {
+            let stray = NSHomeDirectory() + "/Desktop/" + (requested as NSString).pathComponents[1]
+            try? FileManager.default.removeItem(atPath: stray)
+        }
+
+        let passed = verdicts.filter(\.passed).count
+        print("  \(verdict.passed ? "PASS" : "FAIL") \(verdict.id)  \(verdict.detail)")
+        print("[marionette] self-check 完了 \(passed)/\(verdicts.count) PASS")
+        fflush(stdout)
+    }
+
+    private var deferredVerdict: Verdict?
 
     // MARK: - 撮影
 

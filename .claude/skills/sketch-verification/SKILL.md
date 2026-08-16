@@ -210,7 +210,10 @@ gh issue list --repo shinyaoguri/metaphor --state all --search "<キーワード
 1. issue へ **API ごとに**結果を追記する（表の結果列を埋める）。動作確認の詳細はこの issue が一次記録
 2. **`api-coverage.py` の完了後の出力も貼る。** 着手前と並べれば、この作品で何がどれだけ増えたかと、
    **次に残っている領域**が同じ場所に残る
-3. 見つけた問題を metaphor / metaphor-cli へ起票し、issue から番号でリンクする
+3. 見つけた問題を metaphor / metaphor-cli へ起票し、issue から番号でリンクする。
+   **起票したらその場で `verification/upstream.json` へ追加する。**
+   判定手段は可能なかぎり自己検査 ID にしておく（後で機械的に再検証できる）。
+   上流が直ったあとの手順は `upstream-recheck` スキル
 4. README の索引表に 1 行足す（検証記録と踏んだ Issue へのリンク、実装側の学び）
 5. 作品の README に、実測値と「コードを読む人向けの注意」を残す
 6. **切り出した検証スケッチもコミットする。** 原因が分かったからといって消さない

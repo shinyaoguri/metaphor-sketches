@@ -1,0 +1,526 @@
+{
+  "$comment": [
+    "上流へ報告した Issue の台帳。上流で直ったときに、こちらで再検証して結果を書き戻すための材料。",
+    "運用手順は .claude/skills/upstream-recheck/ を読む。",
+    "",
+    "oracle.kind:",
+    "  check  — 作品の自己検査 ID で機械判定できる。ids に判定に使う ID を並べる",
+    "  manual — 目視や個別手順が要る。how に「何を見れば直ったと言えるか」を書く",
+    "baseline — 報告した時点の実測。recheck — 直近の再検証。未実施なら at が null"
+  ],
+  "sketches": {
+    "2026/0816-marionette": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^\\s*(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
+    },
+    "2026/0816-adversary": {
+      "verdictCommand": "tools/probe.sh cycle",
+      "verdictPattern": "^check\\.(?P<id>\\S+)\\t(?P<verdict>PASS|FAIL)"
+    }
+  },
+  "entries": [
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 755,
+      "title": "restitution / friction がまったく効かない",
+      "sketch": "2026/0816-marionette",
+      "ourIssue": 10,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "P3.restitution",
+          "P3b.restitutionMechanism",
+          "P3c.friction"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "接近速度によらず跳ね返り 0.000、friction=0 と 1 が完全同値"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 756,
+      "title": "サブシステム経由だとフレーム時間のジッタで結果が変わる / velocity の単位",
+      "sketch": "2026/0816-marionette",
+      "ourIssue": 10,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "P1.timestepJitter",
+          "P2.velocityUnits"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "同じ 10 秒・同じ平均 dt で落下距離が 25% ずれる / velocity は px/ステップ"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 757,
+      "title": "saveFrame(_:) が保存先を選べず、絶対パスを渡すと無言で何も保存しない",
+      "sketch": "2026/0816-marionette",
+      "ourIssue": 10,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "E1.saveFramePath"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "~/Desktop/ を前置した先に保存され、頼んだ場所には無い"
+      },
+      "recheck": {
+        "at": "2026-08-16",
+        "against": "main (a7fba3c / PR #761)",
+        "verdict": "PASS",
+        "note": "E1.saveFramePath が FAIL → PASS。頼んだ絶対パスに保存された。v0.9.0 では未リリース"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 581,
+      "title": "Physics2D.step(iterations:) の負値で Range trap する",
+      "sketch": "2026/0816-marionette",
+      "ourIssue": 10,
+      "oracle": {
+        "kind": "manual",
+        "how": "MARIONETTE_TRAP=iterations swift run が fatalError で落ちなければ直っている（tools/probe.sh trap）"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "Fatal error: Range requires lowerBound <= upperBound でプロセスごと落ちる"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 743,
+      "title": "arc() が角度を正規化せず、stop < start で逆回りに描き 2π 超もクランプしない",
+      "sketch": "2026/0816-adversary",
+      "ourIssue": 8,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "D1",
+          "D2"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": null
+      },
+      "recheck": {
+        "at": "2026-08-16",
+        "against": "main (a7fba3c)",
+        "verdict": "PASS",
+        "note": "D1 / D2 が FAIL → PASS。角度の正規化と 2π クランプが効いている。盤全体は 56 PASS / 0 FAIL（v0.9.0 は 49/6）"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 744,
+      "title": "複数行テキストが描けない（箱版 text() が折り返さず \\n も無視）",
+      "sketch": "2026/0816-adversary",
+      "ourIssue": 8,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "F6",
+          "F10"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "textLeading() は doc「px」/実装「倍率」の食い違いも含む"
+      },
+      "recheck": {
+        "at": "2026-08-16",
+        "against": "main (a7fba3c)",
+        "verdict": "PASS",
+        "note": "F6 / F10 が FAIL → PASS。折り返しと \\n、textLeading の単位が期待どおり。盤全体は 56 PASS / 0 FAIL（v0.9.0 は 49/6）"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 745,
+      "title": "同一フレーム内で Graphics を描き換えて複数回 image() すると全部が最後の内容になる",
+      "sketch": "2026/0816-adversary",
+      "ourIssue": 8,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "F8"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": null
+      },
+      "recheck": {
+        "at": "2026-08-16",
+        "against": "main (a7fba3c)",
+        "verdict": "PASS",
+        "note": "F8 が FAIL → PASS。同一フレーム内の描き換え + 複数回貼りが独立している。盤全体は 56 PASS / 0 FAIL（v0.9.0 は 49/6）"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 504,
+      "title": "幅・高さを渡す text() が上下反転・鏡像で描画される",
+      "sketch": "2026/0816-adversary",
+      "ourIssue": 8,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "F11"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "報告時点で main は修正済み・v0.9.0 未リリース。main 比較では PASS だった"
+      },
+      "recheck": {
+        "at": "2026-08-16",
+        "against": "main (a7fba3c)",
+        "verdict": "PASS",
+        "note": "F11 が FAIL → PASS。箱版 text() の向きが正しい。盤全体は 56 PASS / 0 FAIL（v0.9.0 は 49/6）"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 684,
+      "title": "VignetteEffect の intensity が「強度」ではなく「黒くならない半径」",
+      "sketch": "2026/0815-strata",
+      "ourIssue": 5,
+      "oracle": {
+        "kind": "manual",
+        "how": "intensity を 0 → 1 と上げて、周辺が単調に暗くなるか（逆なら未修正）"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "意味が逆"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 685,
+      "title": "CaptureDevice が権限 notDetermined でも isAvailable=true でフレーム 0",
+      "sketch": "2026/0815-strata",
+      "ourIssue": 5,
+      "oracle": {
+        "kind": "manual",
+        "how": "権限未定の素の実行ファイルで isAvailable が false / 権限状態が読めるか"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": null
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 686,
+      "title": "DynamicMesh が毎フレーム頂点・インデックスバッファを確保し直す",
+      "sketch": "2026/0815-strata",
+      "ourIssue": 5,
+      "oracle": {
+        "kind": "manual",
+        "how": "地形シーンの frame.json の performance で memoryMB の増減とフレーム時間を報告時と比べる"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": null
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 687,
+      "title": "directionalLight / pointLight に intensity を渡せない",
+      "sketch": "2026/0815-strata",
+      "ourIssue": 5,
+      "oracle": {
+        "kind": "manual",
+        "how": "intensity 付きのオーバーロードが生えてビルドが通るか（llms.txt / api_reference で確認）"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "PBR 単灯が沈む"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 688,
+      "title": ".metaphor/ の置き場を環境変数で指定できるようにする（.app 起動で cwd が / になる）",
+      "sketch": "2026/0815-strata",
+      "ourIssue": 5,
+      "oracle": {
+        "kind": "manual",
+        "how": "scripts/make-app.sh で .app を作って起動し、指定した場所に .metaphor/ ができるか"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "cwd が / になり .metaphor/ が壊れる"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 700,
+      "title": "emissive / specular に 0..255 の 3 引数版が無い",
+      "sketch": "2026/0815-salvage",
+      "ourIssue": 6,
+      "oracle": {
+        "kind": "manual",
+        "how": "emissive(r, g, b) を書いてビルドが通るか（llms.txt に 3 引数版が載るか）"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "fill と揃わない"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 715,
+      "title": "スケッチが SIGTERM で即死するため Syphon サーバがゾンビとして残る",
+      "sketch": "2026/0815-lifegame",
+      "ourIssue": 7,
+      "oracle": {
+        "kind": "manual",
+        "how": "Syphon 送出中に SIGTERM で止め、サーバ列挙が 1 秒以内に消えるか（報告時は 25 秒以上残存）"
+      },
+      "baseline": {
+        "metaphor": "0.9.0",
+        "verdict": "FAIL",
+        "note": "実測 25 秒以上残存 / stop() なら 1 秒以内"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 266,
+      "title": "スケッチ実行中の App Nap 抑止 — バックグラウンドで fps が最大 1/6",
+      "sketch": "2026/0718-memory-stress",
+      "ourIssue": 4,
+      "oracle": {
+        "kind": "manual",
+        "how": "ウィンドウを背面にして fps が落ちないか"
+      },
+      "baseline": {
+        "metaphor": "0.5.3",
+        "verdict": "FAIL",
+        "note": null
+      },
+      "recheck": {
+        "at": "2026-07-19",
+        "against": "v0.6.0",
+        "verdict": "PASS",
+        "note": "ライブラリ既定の抑止で解決。bump 時に再検証済み"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 267,
+      "title": "loadPixels/updatePixels 経路の常駐メモリが +145MB",
+      "sketch": "2026/0718-memory-stress",
+      "ourIssue": 4,
+      "oracle": {
+        "kind": "manual",
+        "how": "pixels フェーズ前後の memoryMB 差を報告時（+145MB / v0.7.0 で +141MB）と比べる"
+      },
+      "baseline": {
+        "metaphor": "0.5.3",
+        "verdict": "FAIL",
+        "note": "v0.7.0 でも +141MB として再観測"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 271,
+      "title": "frame.json に performance セクション",
+      "sketch": "2026/0718-memory-stress",
+      "ourIssue": 4,
+      "oracle": {
+        "kind": "manual",
+        "how": "frame.json の performance が自前計測と一致するか"
+      },
+      "baseline": {
+        "metaphor": "0.6.0",
+        "verdict": "FAIL",
+        "note": "機能要望"
+      },
+      "recheck": {
+        "at": "2026-07-19",
+        "against": "v0.7.0",
+        "verdict": "PASS",
+        "note": "フェーズ横断 65 サンプルで検証。memoryMB は自前計測と差 ≤0.2MB"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor-cli",
+      "issue": 69,
+      "title": "installer 残骸でテンプレートが古く生成される",
+      "sketch": "2026/0718-hello",
+      "ourIssue": 3,
+      "oracle": {
+        "kind": "manual",
+        "how": "metaphor new で生成した雛形が最新テンプレートか"
+      },
+      "baseline": {
+        "metaphor": "cli 0.3.x",
+        "verdict": "FAIL",
+        "note": null
+      },
+      "recheck": {
+        "at": "2026-07-18",
+        "against": "cli v0.4.0",
+        "verdict": "PASS",
+        "note": "解決済み"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor-cli",
+      "issue": 70,
+      "title": "生成される .gitignore に .metaphor/ が入っていない",
+      "sketch": "2026/0718-hello",
+      "ourIssue": 3,
+      "oracle": {
+        "kind": "manual",
+        "how": "metaphor new した直後の .gitignore に .metaphor/ があるか"
+      },
+      "baseline": {
+        "metaphor": "cli 0.3.x",
+        "verdict": "FAIL",
+        "note": null
+      },
+      "recheck": {
+        "at": "2026-07-18",
+        "against": "cli v0.4.0",
+        "verdict": "PASS",
+        "note": "解決済み"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor-cli",
+      "issue": 133,
+      "title": ".metaphor/ の置き場を指定する環境変数を run / watch へ通す",
+      "sketch": "2026/0815-strata",
+      "ourIssue": 5,
+      "oracle": {
+        "kind": "manual",
+        "how": "環境変数を渡して run / watch し、指定先に .metaphor/ ができるか"
+      },
+      "baseline": {
+        "metaphor": "cli 0.9.x",
+        "verdict": "FAIL",
+        "note": "metaphor#688 と対"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor-cli",
+      "issue": 139,
+      "title": "watch --viewer がリロード後に「新しいフレームを待機中…」のまま復帰しない",
+      "sketch": "2026/0815-lifegame",
+      "ourIssue": 7,
+      "oracle": {
+        "kind": "manual",
+        "how": "metaphor watch --viewer で高頻度に保存を繰り返し、ビューアが復帰し続けるか"
+      },
+      "baseline": {
+        "metaphor": "cli 0.9.x",
+        "verdict": "FAIL",
+        "note": "metaphor#715 と対"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    }
+  ]
+}
