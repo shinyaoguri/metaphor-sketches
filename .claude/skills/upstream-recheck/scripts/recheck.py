@@ -96,22 +96,17 @@ def main() -> None:
     args = parser.parse_args()
 
     ledger = json.loads(LEDGER.read_text())
+    # 自己検査を持たない作品でも、差し替えてビルドが通るかは確かめる価値がある
+    # （破壊的変更はビルドで出る）。判定は台帳の how に従って人がやる。
     config = ledger["sketches"].get(args.sketch)
-    if not config:
-        sys.exit(
-            f"{args.sketch} は自己検査で判定できる作品として台帳に載っていない。\n"
-            f"載っているのは: {', '.join(ledger['sketches'])}\n"
-            "手作業で判定する項目は oracle.kind = manual なので、台帳の how に従って確かめる"
-        )
 
     sketch_dir = ROOT / args.sketch
     if not sketch_dir.is_dir():
         sys.exit(f"{sketch_dir} が無い")
 
-    entries = [
-        e for e in ledger["entries"]
-        if e["sketch"] == args.sketch and e["oracle"]["kind"] == "check"
-    ]
+    mine = [e for e in ledger["entries"] if e["sketch"] == args.sketch]
+    entries = [e for e in mine if e["oracle"]["kind"] == "check"]
+    manual = [e for e in mine if e["oracle"]["kind"] == "manual"]
 
     swapped = False
     interrupted = False
@@ -132,6 +127,17 @@ def main() -> None:
             # 破壊的変更はここで出る。上流が壊したのか作品が古いのかを人が見る材料になる
             print("==> ビルドが通らない（破壊的変更の可能性）\n")
             print(build.stderr.strip()[-3000:])
+            return
+
+        print("==> ビルドは通った")
+
+        if config is None:
+            print("\nこの作品は自己検査を持たないので、ここから先は手作業。")
+            for entry in manual:
+                label = f"{entry['repo'].split('/')[-1]}#{entry['issue']}"
+                print(f"\n  {label}  {entry['title']}")
+                print(f"    報告時: {entry['baseline']['verdict']} — {entry['baseline'].get('note') or ''}")
+                print(f"    見方  : {entry['oracle']['how']}")
             return
 
         verdicts, log = collect_verdicts(sketch_dir, config["verdictCommand"], config["verdictPattern"])

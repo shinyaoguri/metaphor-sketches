@@ -44,8 +44,12 @@ main 止まりのものは `--metaphor-path` でローカルのチェックア�
 ```
 
 `swift package edit` で依存を差し替え、ビルドして判定コマンドを走らせ、
-**必ず `unedit` で戻す**（中断・失敗・Ctrl-C でも戻す）。作品の `Package.resolved` は触らないので、
-再検証しても作品は報告時のバージョンに pin されたまま。
+**必ず `unedit` で戻す**（中断・失敗・Ctrl-C でも戻す）。pin（`version` / `revision`）は
+変わらないので、再検証しても作品は報告時のバージョンのまま。
+
+ただし `Package.resolved` の **`originHash` だけが書き換わることがある**（SwiftPM が
+依存グラフの由来を再計算するため）。pin が変わっていなければ意味のある差分ではないので、
+`git checkout <作品>/Package.resolved` で捨ててよい。**pin まで変わっていたら捨てずに調べる。**
 
 出るもの:
 

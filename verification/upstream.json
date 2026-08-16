@@ -110,10 +110,10 @@
         "note": "Fatal error: Range requires lowerBound <= upperBound でプロセスごと落ちる"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-16",
+        "against": "main (a7fba3c)",
+        "verdict": "PASS",
+        "note": "MARIONETTE_TRAP=iterations で実行し、落ちずに P5.stepGuards が PASS。main に guard iterations >= 0 が入っている（根拠: runtime）"
       }
     },
     {
@@ -233,7 +233,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": null
+        "note": "main のコードに「意味が逆だった」旨の記述と修正が入っているのは確認済み。周辺が単調に暗くなるかの目視は未実施"
       }
     },
     {
@@ -255,7 +255,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": null
+        "note": "authorizationStatus が公開され isAvailable の doc も直っているのは確認済み。権限未定の実機挙動は未実施"
       }
     },
     {
@@ -277,7 +277,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": null
+        "note": "未実施。地形シーンを回して performance を報告時と比べる必要がある"
       }
     },
     {
@@ -296,10 +296,10 @@
         "note": "PBR 単灯が沈む"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-16",
+        "against": "main (a7fba3c)",
+        "verdict": "PASS",
+        "note": "directionalLight/pointLight に intensity: Float = 1.0 が生え、strata が main でビルドできる（根拠: API + build）"
       }
     },
     {
@@ -321,7 +321,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": null
+        "note": "METAPHOR_STATE_DIR / METAPHOR_PROBE が main にあるのは確認済み。.app 起動での実挙動は未実施"
       }
     },
     {
@@ -340,10 +340,10 @@
         "note": "fill と揃わない"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-16",
+        "against": "main (a7fba3c)",
+        "verdict": "PASS",
+        "note": "emissive/specular の 3 引数版が llms.txt に載り、salvage が main でビルドできる（根拠: API + build）"
       }
     },
     {
@@ -365,7 +365,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": null
+        "note": "未実施。Syphon 送出中に SIGTERM で止めてサーバ消滅までを測る必要がある"
       }
     },
     {
@@ -409,7 +409,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": null
+        "note": "未実施。pixels フェーズ前後の memoryMB を測り直す必要がある"
       }
     },
     {
@@ -497,7 +497,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": null
+        "note": "未実施。cli をリリース版で run/watch して .metaphor/ の置き場を確かめる必要がある"
       }
     },
     {
@@ -519,7 +519,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": null
+        "note": "未実施。watch --viewer で高頻度に保存を繰り返す必要がある"
       }
     }
   ]
