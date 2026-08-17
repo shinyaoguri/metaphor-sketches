@@ -947,7 +947,10 @@
         "note": "w=-120 の点で screenZ=1.535 / screenX=120.4（中心の左へ回る）"
       },
       "recheck": {
-        "at": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS（isInFront 新設で解決 / 検査が古い）",
+        "note": "上流は screenPosition の値を変えるのではなく isInFront(_:_:_:) を足す形で解決（307bcf2 / PR #873。Canvas3D+Transform.swift:186 ほか 3 箇所に生えている）。旧挙動を期待する D5c.screenZBehindCamera は FAIL のまま（背後 w=-120.00 で screenZ=1.535）。→ 検査を isInFront 前提へ書き換える"
       }
     },
     {
@@ -970,7 +973,10 @@
         "note": "実測 (0.647,0.286,0.071) は fill²×1.3 と一致。main でも未修正"
       },
       "recheck": {
-        "at": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "H1.normalGiven / H1b.fillSquared / H2c.vertexColorTimesFill が FAIL → PASS"
       }
     },
     {
@@ -991,7 +997,10 @@
         "note": "drawShape3DVertices が currentCustomMaterial を見ない。main でも同じ"
       },
       "recheck": {
-        "at": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "H6b.customMaterialImmediate が FAIL → PASS"
       }
     },
     {
@@ -1012,7 +1021,10 @@
         "note": "CLOSED だが v0.9.0 では再現する。main（b30cb67）では修正済み・未リリース"
       },
       "recheck": {
-        "at": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "H6.customMaterialInstanced が FAIL → PASS"
       }
     },
     {
@@ -1033,7 +1045,10 @@
         "note": "CLOSED だが v0.9.0 では再現する。emissive(102) で真っ白。main では修正済み・未リリース"
       },
       "recheck": {
-        "at": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "V10b.emissiveColorModeScale が FAIL → PASS"
       }
     },
     {
@@ -1054,7 +1069,10 @@
         "note": "画面中心に置いた板の中心が (-640, +360) px ずれる（ちょうど半画面）"
       },
       "recheck": {
-        "at": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS（実測は中央 / 検査の解析モデルが古い）",
+        "note": "レンダリング実測では被写体が画面中央に来る（D2.orthoDefault: 実測中心=(640.0, 360.0) 幅=200.0px / 画面は 1280x720）。FAIL のままの D2b.orthoDefaultOffCenter は withDefaultOrtho() というスケッチ側の解析モデル（旧既定の複製）と比べており、ライブラリを測っていない（解析上の中心=(0.0, 720.0)）。→ 検査を実測ベースへ書き換える"
       }
     },
     {
@@ -1077,10 +1095,10 @@
         "note": "完了→除去された Tween に start() しても値は from に凍ったまま（isActive=true）。未 start の 600 本は 600 刻み後も count=600"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "M5.restartAfterComplete / M3.unstartedNeverRemoved / M10.unstartedRetainedAcrossFrames が FAIL → PASS"
       }
     },
     {
@@ -1102,10 +1120,10 @@
         "note": "update(NaN) 1 回で value=nan のまま 600 刻みでも戻らず isComplete=false / count=1。負の dt は from を下回って外挿（50.0000 → -25.0000）"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "T17.nanDelta / T18.negativeDelta が FAIL → PASS"
       }
     },
     {
@@ -1151,10 +1169,10 @@
         "note": "白で埋めた層に background(0,0,0,0) を 2 回: 1 回目 (1.000,1.000,1.000,a=1.000) のまま / 2 回目で (0.000,0.000,0.000,a=0.000)"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "L6.clearToTransparent / L8.transparentClearLag が FAIL → PASS"
       }
     },
     {
@@ -1175,10 +1193,10 @@
         "note": "図形を 1 つ置いたフレームの隅 = (0.000,0.000,0.000,a=1.000)。α を 0 にする口が API に無い"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS（background() 新設で解決 / 検査が古い）",
+        "note": "上流は Graphics3D.background() を足す形で解決（91c1ea8 / PR #915。Graphics3D.swift:183 ほか）。既定のクリア α が 0 になることを期待する L3b.clearAlpha は FAIL のまま（クリア後 α=1.000）。→ 検査を background() で下地を選べるか見る形へ書き換える"
       }
     },
     {
@@ -1199,10 +1217,10 @@
         "note": "A=(0.600,0.200,0.102) に premultiplied な B=(0.102,0.400,0.200,a=0.502) を .alpha で重ねて実測 (0.349,0.302,0.153)。正しくは (0.401,0.500,0.251)"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS（シェーダは修正済み / 検査が読み戻しに惑わされている）",
+        "note": "MetaphorMerge.metal の BLEND_ALPHA は premultiplied 前提の式に直っている（23d7870 / PR #865。ビルド成果物 metaphor_MetaphorCore.bundle/ShaderSources/merge.txt が修正版であることも確認）。M4.alpha が FAIL なのは、読み戻し（PixelBuffer）が ADR-0012 / #848 で straight へ割り戻すようになったため、検査が層の格納値を straight と取り違えているから。実測合成 (0.400, 0.498, 0.251) は premultiplied 格納値から計算した正しい結果 (0.400, 0.499, 0.252) と 0.001 以内で一致する。→ 検査を straight 読み戻し前提へ書き換える"
       }
     },
     {
@@ -1272,10 +1290,10 @@
         "note": "MergePass(.add)=(0.702,0.600,0.302) に対し image()+blendMode(.additive)=(0.651,0.400,0.204)。.alpha でも同じ形で α が二重に掛かる"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "M7.twoCompositors / M7b.imageOverAlpha が FAIL → PASS"
       }
     },
     {
@@ -1297,10 +1315,10 @@
         "note": "黒地に fill(255,255,255,α) の文字の最明画素が α=0/128/255 すべて 1.000（応答が平ら）。同じ α=0 で rect は 0 画素"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "L10.textRespectsAlpha / X7.mainCanvasTextAlpha が FAIL → PASS"
       }
     },
     {
@@ -1319,10 +1337,10 @@
         "note": "0816-probe-windowclose の PROBE_MODE=reopen / openclose / burst / cycle が 3/3 で exit 139。isReleasedWhenClosed=false を外から立てた *-fixed は 3/3 で exit 0"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "2026/0816-probe-windowclose の PROBE_MODE=reopen / openclose / burst / cycle がいずれも exit 0 で完走（報告時は exit 139 の SIGSEGV）。triptych 側も TRIPTYCH_NOWORKAROUND=1 で t=42s の開き直しを越えて 55 秒生存したので、当て木 WindowCrashWorkaround を外せる"
       }
     },
     {
@@ -1341,10 +1359,10 @@
         "note": "翼を開き直すと ctx.time が 0 から始まり、共有時計との差が Δ=-42009.7ms になる (42 秒ぶんの巻き戻り)"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "tools/probe.sh trace 60 で、t=42.25s の開き直し直後の翼が own=42.24s / Δ=8.2ms（報告時は own が 0 から始まり Δ=-42009.7ms）。共有時計に対する巻き戻りが消えた。frames のカウンタは 13 から数え直すが、時刻は継続している"
       }
     },
     {
@@ -1388,10 +1406,10 @@
         "note": "trap zero / negative / huge がいずれも Metal のアサーションで exit 134。windowScale:0 は 0×0 のウィンドウが isOpen=true で開く"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "tools/probe.sh trap zero / negative / huge / scalezero のいずれも abort せず「[W8] trap=… → nil を返した」（報告時は Metal のアサーションで exit 134、windowScale:0 は 0×0 のウィンドウが isOpen=true で開いていた）"
       }
     }
   ]
