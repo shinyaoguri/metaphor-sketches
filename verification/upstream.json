@@ -75,10 +75,10 @@
         "note": "接近速度によらず跳ね返り 0.000、friction=0 と 1 が完全同値"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "P3.restitution / P3b.restitutionMechanism / P3c.friction が FAIL → PASS。e=0.9 の落下で跳ね上がり比 0.807（期待 0.810）、friction=0 → 横速度 8.0000 / friction=1 → 0.0000。v0.10.0 は未リリース（PR #931 が開いている）"
       }
     },
     {
@@ -100,10 +100,10 @@
         "note": "同じ 10 秒・同じ平均 dt で落下距離が 25% ずれる / velocity は px/ステップ"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS（修正は入っている / 検査が古い）",
+        "note": "上流は Physics2D.advance(_:) を新設して固定刻み（既定 1/120・最大 8 サブステップ）で積むよう直し、step(_:iterations:) は低レベル API として据え置いた（c2493e3）。こちらの P1.timestepJitter は step() を直接叩くので修正経路を通らず FAIL のまま（ratio=1.249 — 報告時と同値）。P2.velocityUnits も velocity が per-step だと doc で確定した（PhysicsBody2D.swift:106-111）ので px/sec を期待する検査側が古い。→ 検査を advance() 経由へ書き換える"
       }
     },
     {
@@ -269,7 +269,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "main のコードに「意味が逆だった」旨の記述と修正が入っているのは確認済み。周辺が単調に暗くなるかの目視は未実施"
+        "note": "2026-08-17 の巡回では未実施（目視が要る）。main でのビルドは通る"
       }
     },
     {
@@ -291,7 +291,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "authorizationStatus が公開され isAvailable の doc も直っているのは確認済み。権限未定の実機挙動は未実施"
+        "note": "2026-08-17 の巡回では未実施。権限 notDetermined の状態を作り直せない（TCC のリセットに管理者権限が要る）"
       }
     },
     {
@@ -313,7 +313,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "未実施。地形シーンを回して performance を報告時と比べる必要がある"
+        "note": "2026-08-17 の巡回では未実施。地形シーンの frame.json 取得に CLI 経由の probe が要る"
       }
     },
     {
@@ -357,7 +357,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "METAPHOR_STATE_DIR / METAPHOR_PROBE が main にあるのは確認済み。.app 起動での実挙動は未実施"
+        "note": "2026-08-17 の巡回では未実施。METAPHOR_STATE_DIR は main のソースにあるが、素の実行ファイル + METAPHOR_PROBE=1 では .metaphor/ が作られず（CLI 経由の起動が要る）、.app 起動での実挙動まで到達できなかった"
       }
     },
     {
@@ -401,7 +401,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "未実施。Syphon 送出中に SIGTERM で止めてサーバ消滅までを測る必要がある"
+        "note": "2026-08-17 の巡回では未実施。Syphon サーバ列挙ツールが作品側に残っていないため、実測には列挙ツールの作り直しが要る"
       }
     },
     {
@@ -442,10 +442,10 @@
         "note": "v0.7.0 でも +141MB として再観測"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": "未実施。pixels フェーズ前後の memoryMB を測り直す必要がある"
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "NOT_PLANNED（上流の判断）",
+        "note": "上流が 2026-08-14 に『常駐ではなく pixels 経路を使っている間だけ』『ライブラリ側に打てる手が無い』として close（NOT_PLANNED）。こちらの今日の実測も同傾向: warmup 316.2MB → pixels 483.4MB（+167MB / 2 周目 +162MB）、cooldown で 321MB へ戻る。全フェーズを回した過去の記録（+145MB @0.5.3 / +141MB @0.7.0）とは走らせたフェーズ列が違うので、増分の数字はそのまま比較できない"
       }
     },
     {
@@ -533,7 +533,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "未実施。cli をリリース版で run/watch して .metaphor/ の置き場を確かめる必要がある"
+        "note": "2026-08-17 の巡回では未実施。metaphor#688 と対で、同じく .app / CLI 経由の起動が要る"
       }
     },
     {
@@ -555,7 +555,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "未実施。watch --viewer で高頻度に保存を繰り返す必要がある"
+        "note": "2026-08-17 の巡回では未実施。手元の brew 版 CLI は 0.10.2 で最新リリース 0.13.0 に追いついていない"
       }
     },
     {
@@ -596,10 +596,10 @@
         "note": "生成直後の雛形しか検査しておらず、育った実物を動かす検査が無い"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": "提案したばかり。上流の判断待ち"
+        "at": "2026-08-17",
+        "against": "cli main (GitHub 上の workflow)",
+        "verdict": "PASS",
+        "note": ".github/workflows/sketch-smoke.yml が入り、release.yml から blocking=false で呼ばれるようになった（実スケッチを metaphor run / watch で動かす）。2026-08-16 の実行が success"
       }
     },
     {
@@ -645,10 +645,10 @@
         "note": "spectrum は生きているのに bandEnergy だけ 0.00000。誤設定と無エネルギーが区別できない"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS（修正は入っている / 検査が古い）",
+        "note": "上流は『黙って 0 を返す』のをやめる形で解決（PR #790 / 25ad2f8）。実行ログに警告が出るのを確認（[MetaphorAudio] Warning: bandEnergy(lowFreq:highFreq:) returned 0 because the sample rate is unknown …）。戻り値は 0 のままなので、非 0 を期待する A3.bandEnergyWithoutSampleRate は FAIL のまま。→ 検査を警告の有無で判定する形へ書き換える"
       }
     },
     {
@@ -670,10 +670,10 @@
         "note": "sample() が origin/sampleScale を無視。64 点の行で grid と sample の最大差 0.26009"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS（docs で確定 / 検査が古い）",
+        "note": "上流は docs で解決（2b7a07e『sample(x:y:) と grid 系が別座標系であることを明記』）。挙動は変わらないので N8.originScope / N9.gridMatchesSample は FAIL のまま（grid と sample の最大差 0.26009 — 報告時と同値）。→ 別座標系である前提へ検査を書き換える"
       }
     },
     {
@@ -718,10 +718,10 @@
         "note": "0.8 秒止めて再開すると最初の deltaTime が 0.8554s（1 フレーム 0.0167s の 51 倍）。main（db7bd76）でも再現。最小再現は 2026/0816-probe-frameloop の PROBE=resume"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "L5.resumeDelta が FAIL → PASS。escapement 盤全体で退行なし"
       }
     },
     {
@@ -740,10 +740,10 @@
         "note": "RETURN / TAB / BACKSPACE / CONTROL が sys/tty.h のマクロと衝突。metaphor.RETURN と修飾しても絞れない（Foundation を @_exported しているため）。型注釈だけが回避策"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS（KeyCode 新設で解決 / 検査の見方を要更新）",
+        "note": "上流は KeyCode 名前空間の新設で解決（3d2c810 / PR #818）。import Foundation + import metaphor でも KeyCode.return / .tab / .delete / .control が typecheck を通ることを確認。旧グローバル定数の曖昧さは据え置きなので tools/collide.sh は 4/21 のまま（設計判断）。→ collide.sh の読み方を KeyCode 前提へ改める"
       }
     },
     {
@@ -762,10 +762,10 @@
         "note": "MTLTextureDescriptor has width/height of zero のアサーションで Abort trap: 6。createImage(0,0) は nil を返すので、同じ形の API で挙動が割れている。main（db7bd76）でも再現"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "tools/probe.sh trap graphicsZero / graphicsNegative / graphics3DZero のいずれも Abort trap で落ちず、警告つきで nil を返す（[metaphor] Warning: createGraphics: dimensions must be positive (got 0x0) → [trap] createGraphics(0,0)=nil）。createImage(0,0) と挙動が揃った"
       }
     },
     {
@@ -825,10 +825,10 @@
         "note": "α=0 の src を重ねても下地が変わる（multiply/screen/lightest/darkest）。α=0.5 が α=1 と 1 ビットも変わらない。subtract は α がクランプ前に掛かる。結果アルファも multiply/darkest が src.a×dst.a、subtract が dst.a−src.a で、subtract は α=1 で塗ると結果が完全に透明になる。main（28b44e5）でも BlendMode 周辺に差分なしで再現。最小再現は 2026/0816-probe-blendalpha"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "台帳の 16 検査すべてが FAIL → PASS（A0/A5 の 4-5 モード、A2/A3/A4 の結果アルファ、R2.mainBlend.a0）。gamut 盤 102 判定で退行なし"
       }
     },
     {
@@ -849,10 +849,10 @@
         "note": "形式外 8 件中 4 件が色として通る（\"#F\" / \"#FFF\" / \"#12345\" / \"#1234567\"）。main 28b44e5 でも同じ実装"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS（報告した症状は解消 / 検査が古い）",
+        "note": "\"#FFF\" が青ではなく白 (1.000, 1.000, 1.000) になった。形式外 8 件のうち色として通るのは \"#FFF\" 1 件だけで、報告時の 4 件から減った。3 桁を CSS 短縮形として意図的に受けることが Color.swift:160-167 に明記されたので、\"#RRGGBB\"/\"#AARRGGBB\" だけを想定する A12.hexStringInvalid が古い。→ 検査を 3 桁許容へ更新"
       }
     },
     {
@@ -873,10 +873,10 @@
         "note": "不透明どうしの subtract で α=0.000。他 9 モードは 1.000。RGB は dst-src で正しい。main 28b44e5 でも同じ実装"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "B9.blendAlpha が FAIL → PASS。不透明どうしの subtract で α が保たれる。prism 盤は 37 PASS / 3 FAIL"
       }
     },
     {
@@ -899,10 +899,10 @@
         "note": "Menlo 17px (真の advance 10.235px) で textWidth(\"i\")=11.0、\"i\"×16=164.0 → 1 字あたり 10.25。Helvetica で textWidth(\"T\")+textWidth(\"o\")=21.0 に対し textWidth(\"To\")=18.0。textWidth(\" \")=0.0 かつ textWidth(\"A \")=textWidth(\"A\")=12.0 だが textWidth(\" A\")=16.0"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "G1.width-additivity / G2.width-space-trim / G6.monospace-advance が FAIL → PASS"
       }
     },
     {
@@ -923,10 +923,10 @@
         "note": "揃えに使われる幅と textWidth() の差が、号数 11〜105 のすべてで +2.0px ちょうど (glyphW = ceil(advance) + 2 の定数と一致)"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-17",
+        "against": "main (d4faf3e)",
+        "verdict": "PASS",
+        "note": "P1.ruler-mismatch が FAIL → PASS。galley 盤 17 判定で退行なし"
       }
     },
     {
