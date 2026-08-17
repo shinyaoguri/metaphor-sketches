@@ -33,12 +33,30 @@ def gh_json(args: list[str]) -> list | dict:
     return json.loads(result.stdout or "[]")
 
 
-def fetch_issues(repo: str) -> dict[int, dict]:
+def fetch_issues(repo: str, wanted: set[int]) -> dict[int, dict]:
+    """台帳が参照している Issue の状態を集める。
+
+    `issue list` は新しい順に打ち切られるので、上流が育つと**古い Issue が窓から
+    こぼれて「見つからない」になる**（metaphor が #929 まで伸びた 2026-08-17 に実際に
+    #266 / #267 / #271 で起きた）。一覧で拾えなかったぶんは番号で直接引き直す。
+    """
     rows = gh_json([
         "issue", "list", "--repo", repo, "--state", "all", "--limit", "300",
         "--json", "number,state,closedAt,title",
     ])
-    return {r["number"]: r for r in rows}
+    found = {r["number"]: r for r in rows}
+
+    for number in sorted(wanted - set(found)):
+        result = subprocess.run(
+            ["gh", "issue", "view", str(number), "--repo", repo,
+             "--json", "number,state,closedAt,title"],
+            capture_output=True, text=True, timeout=180,
+        )
+        # 消された・移された Issue はここでも引けない。その場合は従来どおり
+        # 「見つからない」として呼び出し側に判定させる
+        if result.returncode == 0:
+            found[number] = json.loads(result.stdout)
+    return found
 
 
 def fetch_latest_release(repo: str) -> dict | None:
@@ -55,7 +73,10 @@ def main() -> None:
     entries = ledger["entries"]
 
     repos = sorted({e["repo"] for e in entries})
-    issues = {repo: fetch_issues(repo) for repo in repos}
+    issues = {
+        repo: fetch_issues(repo, {e["issue"] for e in entries if e["repo"] == repo})
+        for repo in repos
+    }
     releases = {repo: fetch_latest_release(repo) for repo in repos}
 
     for repo, release in releases.items():
