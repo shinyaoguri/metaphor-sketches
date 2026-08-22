@@ -192,8 +192,12 @@ gh issue list --repo shinyaoguri/metaphor --state all --search "<キーワード
   MCP にファイルを上げる口が無い
 - GIF は `beginFrameRecord` が吐いた連番から ffmpeg で組む。画面収録と違い映り込みが無い
 
-**1Password がロックされていると、`op read`（Gyazo トークン）と git のコミット署名が
-両方とも無言で止まる。** 承認待ちを積み上げないよう再試行せず、ユーザーへロック解除を頼む。
+**Gyazo のトークンは `op read` ではなく `secret-read` で読む**（`gyazo-capture` スキルの
+とおり）。`op read` は 1Password がロックされていると承認待ちのまま返らず、無人の巡回が
+そこで止まる。`secret-read` は Keychain のキャッシュから読むのでロックに左右されず、
+コミット署名も Secure Enclave の agent が承認なしで行う。**つまりここで 1Password の
+ロック解除を頼む場面はもう無い**。それでも読めないときは、承認待ちを積み上げないよう
+再試行せず、`secret-read --check` の結果を添えてユーザーへ報告する。
 
 添えるときは**撮影範囲と、どこを見てほしいか**を必ず本文に書く。
 上流の Issue にも同じ規則で添える（#755 には pit の画像を追記した）。
