@@ -60,6 +60,10 @@
     "2026/0823-darkroom": {
       "verdictCommand": "tools/probe.sh cycle",
       "verdictPattern": "^(?P<verdict>PASS|FAIL|LOOK|N/A)\\t(?P<id>\\S+)"
+    },
+    "2026/0824-duet": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
     }
   },
   "entries": [
@@ -1508,6 +1512,100 @@
         "against": null,
         "verdict": null,
         "note": ""
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 1090,
+      "title": "CircleInstance の実メモリ順が公開ドキュメントから読めず、GPU から書くと無警告で 1 つも描かれない",
+      "sketch": "2026/0824-duet",
+      "ourIssue": 26,
+      "oracle": {
+        "kind": "manual",
+        "how": "llms.txt / DocC の CircleInstance に、GPU 側から書くときの MSL 定義（position → diameter → 詰め物 → color、stride 32）が載ったか。G10.layout は Swift 側のレイアウトを測るだけなので、doc の欠落は機械判定できない"
+      },
+      "baseline": {
+        "metaphor": "0.13.0",
+        "verdict": "FAIL",
+        "note": "doc の並び（color / diameter / position）どおりに MSL を書くとコンパイルは通り、無警告で 1 つも描かれない。実体は position@0 / diameter@8 / 内部の詰め物@12 / color@16 で stride 32"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 1091,
+      "title": "createBuffer(count:) が nil を返す代わりに落ちる（stride×count のオーバーフロー）",
+      "sketch": "2026/0824-duet",
+      "ourIssue": 26,
+      "oracle": {
+        "kind": "manual",
+        "how": "DUET_TRAP=alloc で起動して、createBuffer(count: Int.max/8) が trap せず nil を返すか（落ちなくなれば PASS）。常時実行すると起動できないので自己検査 ID には載せていない"
+      },
+      "baseline": {
+        "metaphor": "0.13.0",
+        "verdict": "FAIL",
+        "note": "createBuffer(count: Int.max/8, type: Voice.self) が Swift runtime failure: arithmetic overflow で即死。count:0 と count:2^34 は期待どおり nil"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 1092,
+      "title": "dispatch / computeBarrier を compute() の外で呼ぶと無警告で何も起きない",
+      "sketch": "2026/0824-duet",
+      "ourIssue": 26,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "G14.dispatchOutsideFrame"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.13.0",
+        "verdict": "LOOK",
+        "note": "setup() から dispatch を呼ぶと書き込みが起きない（実測 -1 のまま）。threads:0 は警告するのに、コマンドバッファが無い経路は無言。G14 は「書き込み無し」を LOOK で記録しているので、上流が警告を足したら検査側も警告の有無を見る形へ直す"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 1093,
+      "title": "compute が書いた GPUBuffer をいつ CPU から読めるのか / computeBarrier が要るのかが書かれていない",
+      "sketch": "2026/0824-duet",
+      "ourIssue": 26,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "G6.barrier",
+          "G7.readback",
+          "G7b.loadPixelsSync"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.13.0",
+        "verdict": "LOOK",
+        "note": "dispatch 直後の toArray() は投げる前の内容（実測 0 / 次フレーム 12345）。完了を待つ公開 API が無く、loadPixels() だけが実質の同期。computeBarrier はエンコーダが直列なので不要（65536 要素の依存連鎖でバリア無しでも不一致 0 件）"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": null
       }
     }
   ]
