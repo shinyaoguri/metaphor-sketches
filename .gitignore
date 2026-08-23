@@ -10,6 +10,9 @@ DerivedData/
 .metaphor/
 Captures/
 Exports/
+# metaphor 0.10.0 以降、saveFrame() / beginFrameRecord() の既定の書き出し先は
+# <project>/output/ (metaphor#757)。画像はコミットせず Gyazo へ上げる運用なので外す
+output/
 
 # 観測の生成物 (ソークの CSV・GIF 用の連番 PNG など。作品ごとの tools/probe.sh が吐く)
 .probe-out/

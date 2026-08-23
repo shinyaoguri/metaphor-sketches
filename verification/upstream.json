@@ -52,6 +52,10 @@
     "2026/0816-triptych": {
       "verdictCommand": "tools/probe.sh check",
       "verdictPattern": "^\\[(?P<id>[^\\]]+)\\]\\s+(?P<verdict>PASS|FAIL)"
+    },
+    "2026/0823-switchboard": {
+      "verdictCommand": "tools/probe.sh cycle",
+      "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
     }
   },
   "entries": [
@@ -1410,6 +1414,74 @@
         "against": "main (d4faf3e)",
         "verdict": "PASS",
         "note": "tools/probe.sh trap zero / negative / huge / scalezero のいずれも abort せず「[W8] trap=… → nil を返した」（報告時は Metal のアサーションで exit 134、windowScale:0 は 0×0 のウィンドウが isOpen=true で開いていた）"
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 1063,
+      "title": "ヘッドレスのとき RenderLoopMode.resolve が明示した timer(fps:) を config.fps で上書きする",
+      "sketch": "2026/0823-switchboard",
+      "ourIssue": 23,
+      "oracle": {
+        "kind": "check",
+        "ids": [
+          "R1c.resolve.headlessKeepsExplicitFPS"
+        ]
+      },
+      "baseline": {
+        "metaphor": "0.13.0",
+        "verdict": "FAIL",
+        "note": "resolve(requested: .timer(30), fps: 60, isHeadless: true) → timer(60)。ウィンドウ表示では timer(30) のままなので、同じ設定で経路により倍のレートになる"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": ""
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor-syphon",
+      "issue": 9,
+      "title": "METAPHOR_SYPHON_NAME と plugins: [.syphon(name:)] の併用で Syphon サーバーが 2 つ立ち、片方は止められない",
+      "sketch": "2026/0823-switchboard",
+      "ourIssue": 23,
+      "oracle": {
+        "kind": "manual",
+        "how": "METAPHOR_SYPHON_NAME=EnvName SWITCHBOARD_STOP_SYPHON_AT=120 swift run しながら tools/syphon-servers.sh を叩く。直っていればサーバーは 1 本だけ（いまは EnvName と Switchboard の 2 本が立ち、stopSyphonServer() は最初の 1 本しか止められない）"
+      },
+      "baseline": {
+        "metaphor": "0.13.0 / metaphor-syphon 0.2.0",
+        "verdict": "FAIL",
+        "note": "1 プロセスから name=EnvName と name=Switchboard の 2 サーバー。stopSyphonServer() 後も plugin(id:) は非 nil で Switchboard が残る"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": ""
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor-syphon",
+      "issue": 10,
+      "title": "MetaphorSyphon.version の doc が存在しない型 MetaphorVersion を案内している",
+      "sketch": "2026/0823-switchboard",
+      "ourIssue": 23,
+      "oracle": {
+        "kind": "manual",
+        "how": "Sources/MetaphorSyphon/MetaphorSyphon.swift の doc コメントが Metaphor（正しい型名）を指しているか。metaphor 側の型は Metaphor で、ファイル名だけが MetaphorVersion.swift"
+      },
+      "baseline": {
+        "metaphor": "0.13.0 / metaphor-syphon 0.2.0",
+        "verdict": "FAIL",
+        "note": "doc は「依存している metaphor 本体の版は MetaphorVersion を見る」だが、その型は無い（MetaphorVersion.version は cannot find in scope）"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": ""
       }
     }
   ]
