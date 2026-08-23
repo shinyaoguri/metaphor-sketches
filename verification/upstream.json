@@ -56,6 +56,10 @@
     "2026/0823-switchboard": {
       "verdictCommand": "tools/probe.sh cycle",
       "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
+    },
+    "2026/0823-darkroom": {
+      "verdictCommand": "tools/probe.sh cycle",
+      "verdictPattern": "^(?P<verdict>PASS|FAIL|LOOK|N/A)\\t(?P<id>\\S+)"
     }
   },
   "entries": [
@@ -1448,7 +1452,7 @@
       "ourIssue": 23,
       "oracle": {
         "kind": "manual",
-        "how": "METAPHOR_SYPHON_NAME=EnvName SWITCHBOARD_STOP_SYPHON_AT=120 swift run しながら tools/syphon-servers.sh を叩く。直っていればサーバーは 1 本だけ（いまは EnvName と Switchboard の 2 本が立ち、stopSyphonServer() は最初の 1 本しか止められない）"
+        "how": "METAPHOR_SYPHON_NAME=EnvName SWITCHBOARD_STOP_SYPHON_AT=120 swift run しながら tools/syphon-servers.sh を叩く。直っていればサーバーは 1 本だけ（いまは EnvName と Switchboard の 2 本が立ち、stopSyphonServer() は最初の 1 本しか止められない）。3 窓構成での再現と「1 回目の stopSyphonServer() が止めるのは env 側で宣言側が残る」ことは 2026/0823-darkroom の tools/probe.sh stoptest でも確かめられる"
       },
       "baseline": {
         "metaphor": "0.13.0 / metaphor-syphon 0.2.0",
@@ -1476,6 +1480,28 @@
         "metaphor": "0.13.0 / metaphor-syphon 0.2.0",
         "verdict": "FAIL",
         "note": "doc は「依存している metaphor 本体の版は MetaphorVersion を見る」だが、その型は無い（MetaphorVersion.version は cannot find in scope）"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": ""
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor-syphon",
+      "issue": 12,
+      "title": "SketchWindowConfig の .syphon()（名前省略）が窓ごとにプロセス名で publish するため、複数窓だと同名サーバーが並ぶ",
+      "sketch": "2026/0823-darkroom",
+      "ourIssue": 25,
+      "oracle": {
+        "kind": "manual",
+        "how": "tools/probe.sh anon で 3 窓とも .syphon()（名前なし）で起動し、立ったサーバーを列挙する。直っていればセカンダリ 2 枚が別々の名前（窓のタイトル等）を名乗る。doc だけの修正で閉じる場合は、PluginFactory.syphon(name:) の doc に「窓では名前を明示せよ」の記載があるかを見る"
+      },
+      "baseline": {
+        "metaphor": "0.13.0 / metaphor-syphon 0.2.0",
+        "verdict": "FAIL",
+        "note": "A=0823-darkroom — A ─ 原版（スケッチのタイトル）、B と C はどちらも Sketch0823Darkroom（プロセス名）。同名 2 本が UUID 違いで共存し、受け手から名前で選べない"
       },
       "recheck": {
         "at": null,
