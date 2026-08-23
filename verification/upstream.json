@@ -64,6 +64,10 @@
     "2026/0824-duet": {
       "verdictCommand": "tools/probe.sh check",
       "verdictPattern": "^(?P<verdict>PASS|FAIL)\\s+(?P<id>\\S+)"
+    },
+    "2026/0824-insignia": {
+      "verdictCommand": "tools/probe.sh check",
+      "verdictPattern": "^\\s*(?P<id>\\S+):\\s+(?P<verdict>PASS|FAIL)"
     }
   },
   "entries": [
@@ -1606,6 +1610,94 @@
         "against": null,
         "verdict": null,
         "note": null
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 1095,
+      "title": "シャドウマップの焼き付け範囲が sceneRadius=500 固定で、小さいワールドでは影が潰れる",
+      "sketch": "2026/0824-insignia",
+      "ourIssue": 27,
+      "oracle": {
+        "kind": "manual",
+        "how": "tools/probe.sh contrast を走らせ、INSIGNIA_SCALE=1 の m ビューで床の影の輪郭が読めるかを見る。直っていれば worldScale=120 と 1 でほぼ同じ影が出る。自己検査 S1.shadowFootprint は sceneRadius=500 を前提に計算しているので、直ったら Instrument.swift 側の式も直す（S1 は自動判定に使えない）"
+      },
+      "baseline": {
+        "metaphor": "0.13.0",
+        "verdict": "FAIL",
+        "note": "worldScale=120 では 4096px マップの 1877px を占めるが、仕様どおりの論理単位（worldScale=1、外接球半径 1.91）では 15px に潰れ、床の影がブロック状になりコイル表面に多角形のアクネが出る"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": ""
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 1096,
+      "title": "影を落とすが受けないオブジェクトを作れない (castShadow / receiveShadow 相当が無い)",
+      "sketch": "2026/0824-insignia",
+      "ourIssue": 27,
+      "oracle": {
+        "kind": "manual",
+        "how": "api_reference で castShadow / receiveShadow 相当の口が生えたかを見る。生えていれば App.swift の既定を「影オン + メッシュは受けない」に戻し、m ビューで奥のコイルが沈まないことを確認する"
+      },
+      "baseline": {
+        "metaphor": "0.13.0",
+        "verdict": "FAIL",
+        "note": "enableShadows() は全体スイッチで、有効にすると 3D は一律に落とす + 受ける。らせんの自己遮蔽で奥のコイルが一様に暗く沈み、m のシルエットが読めなくなるため、この作品は影を既定でオフにしている"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": ""
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 1097,
+      "title": "background の α を 0 にしても saveFrame の PNG が全画素 α=255 になる (透過 PNG を書けない)",
+      "sketch": "2026/0824-insignia",
+      "ourIssue": 27,
+      "oracle": {
+        "kind": "manual",
+        "how": "INSIGNIA_SHOTS=1 INSIGNIA_TRANSPARENT=1 swift run で撮り、`ffmpeg -v error -i output/insignia-m-alpha.png -vf alphaextract -pix_fmt gray -f rawvideo - | python3 -c \"import sys;d=sys.stdin.buffer.read();print(min(d),max(d),d.count(0))\"` を見る。直っていれば背景ぶんの画素が α=0 になる。仕様として不透明のままにするなら、llms.txt の saveFrame に注記が入ったかを見る"
+      },
+      "baseline": {
+        "metaphor": "0.13.0",
+        "verdict": "FAIL",
+        "note": "1280x800 の全 1,024,000 画素が α=255。RGB 側の絵は正しい（非背景 17.9%）"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": ""
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 1098,
+      "title": "perspective() などフレーム開始で既定に戻る状態が llms.txt に書かれていない",
+      "sketch": "2026/0824-insignia",
+      "ourIssue": 27,
+      "oracle": {
+        "kind": "manual",
+        "how": "llms.txt の perspective / ortho / camera / directionalLight などのエントリに「毎フレーム呼ぶ必要がある」の注記が入ったか、または llms-sketch.txt にフレームを跨ぐ状態の一覧が載ったかを見る"
+      },
+      "baseline": {
+        "metaphor": "0.13.0",
+        "verdict": "FAIL",
+        "note": "setup() で perspective(fov: 32°) を 1 度呼んだだけでは効かず、既定の 60° で黙って描かれる。エラーも警告も出ないので、シルエットの実測とカメラ距離の計算が合わなくて初めて分かった"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": ""
       }
     }
   ]
