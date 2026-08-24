@@ -100,7 +100,8 @@ Everything else held, including some things worth naming:
 
 **`RETURN` / `TAB` / `BACKSPACE` / `CONTROL` cannot be written bare once the file imports
 Foundation.** They collide with Darwin macros from `sys/tty.h`, and `metaphor.RETURN` does *not*
-disambiguate (metaphor re-exports Foundation). A type annotation is the only fix:
+disambiguate (metaphor re-exports Foundation). Within the bare globals, a type annotation is the
+only fix:
 
 ```swift
 let ret: UInt16 = RETURN   // compiles
@@ -108,7 +109,18 @@ print("\(RETURN)")         // error: ambiguous use of 'RETURN'
 ```
 
 `tools/collide.sh` scans all 21 constants under both import sets. Reported as
-[metaphor#794](https://github.com/shinyaoguri/metaphor/issues/794).
+[metaphor#794](https://github.com/shinyaoguri/metaphor/issues/794) and **fixed in v0.10.0** —
+not by renaming the globals (they still collide, so the tool keeps reporting all four) but by
+adding a `KeyCode` namespace that carries the same values under a qualified spelling:
+
+```swift
+print("\(KeyCode.return)")      // compiles — no annotation needed
+if keyCode == KeyCode.space { } // reads better than the bare global too
+```
+
+So read `collide.sh` output as "which spellings still need an annotation", not as "still broken".
+The namespace is the way out whenever a sketch needs both key input and Foundation — which
+includes every sketch using `saveState()` / `restoreState(_:)`, since those take `Data`.
 
 **`square(_:frequency:duty:)` is shadowed inside a `Sketch`** by the drawing method
 `square(_:_:_:)`. Write `MetaphorCore.square(t, frequency:duty:)`.
