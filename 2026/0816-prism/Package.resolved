@@ -1,13 +1,13 @@
 {
-  "originHash" : "92e796614a13401fd0fa396025cc469891a3ea04d0ce612b05c7b99740e8d392",
+  "originHash" : "144712cbcf1bd53b5dab78ba0bd312afe568b16601cabd6fb0bbbc6babc49aba",
   "pins" : [
     {
       "identity" : "metaphor",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/shinyaoguri/metaphor.git",
       "state" : {
-        "revision" : "32e15b8fe0d4516d32949c9e6a6810f0fe6e1445",
-        "version" : "0.13.0"
+        "revision" : "f822f883b6b7d3da951955163b5db1f0a08931e4",
+        "version" : "0.14.0"
       }
     }
   ],

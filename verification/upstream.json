@@ -1448,9 +1448,9 @@
       },
       "recheck": {
         "at": "2026-08-24",
-        "against": "main 04125fa5（修正 75ce2df9 は v0.14.0 に含まれる）",
+        "against": "v0.14.0（作品の pin。修正 75ce2df9 = PR #1087）",
         "verdict": "PASS",
-        "note": "R1c.resolve.headlessKeepsExplicitFPS が PASS。実測: resolve(requested: .timer(30), fps: 60, isHeadless: true) が要件の有無によらず timer(30) を返す（報告時は timer(60) へ潰れていた）。盤全体 13 検査に退行なし"
+        "note": "R1c.resolve.headlessKeepsExplicitFPS が PASS。実測: resolve(requested: .timer(30), fps: 60, isHeadless: true) が要件の有無によらず timer(30) を返す（報告時は timer(60) へ潰れていた）。まず main 04125fa5 へ差し替えて確認し、そのあと作品の pin を v0.14.0 へ上げたところ 差し替えなしで PASS になったので、修正がリリースに載っていることまで裏が取れた。盤全体 13 検査に退行なし"
       }
     },
     {

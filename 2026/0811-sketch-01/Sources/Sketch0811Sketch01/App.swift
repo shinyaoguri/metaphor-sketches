@@ -1,0 +1,43 @@
+import metaphor
+
+@main
+final class Sketch0811Sketch01: Sketch {
+    var config: SketchConfig {
+        SketchConfig(width: 3840, height: 2160, title: "0811-sketch-01")
+    }
+
+    // マウスが一度でも動いたか。初回は中央に表示するために使う。
+    private var mouseHasMoved = false
+
+    func setup() {
+        frameRate(60)
+    }
+
+    func draw() {
+        // AI 観測: draw() 内で probe("ラベル", 値) を呼ぶと snapshot の frame.json に現れる。
+        // 例: probe("mouse", [mouseX, mouseY])（metaphor mcp / watch 下で有効。詳細は AGENTS.md）
+        background(100, 100, 100)
+        noStroke()
+
+        let pulse = 0.5 + 0.5 * sin(time * 2.0)
+        let radius = 100 + pulse * 48
+
+        // マウスが動いたら以降は実際の座標を使う。座標はウィンドウ端で
+        // [0,width]×[0,height] にクランプされるため、端に出れば端に留まる。
+        // （`mouseX > 0` で判定すると左/上端の座標 0 が未移動扱いになり中央へ飛ぶ）
+        if mouseX != pmouseX || mouseY != pmouseY {
+            mouseHasMoved = true
+        }
+        let x = mouseHasMoved ? mouseX : width / 2
+        let y = mouseHasMoved ? mouseY : height / 2
+
+        fill(230, 64 + pulse * 76, 38)
+        circle(x, y, radius)
+
+        fill(255)
+        textSize(16)
+
+        line(width / 2, 0, width / 2, height)
+        line(0, height / 2, width, height / 2)
+    }
+}
