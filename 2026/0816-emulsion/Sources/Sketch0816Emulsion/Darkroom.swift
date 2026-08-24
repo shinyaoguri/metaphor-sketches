@@ -98,33 +98,46 @@ final class Darkroom {
         for o in observations { Emulsion.say(o.line) }
     }
 
-    /// `L3` — `Graphics3D` には `background()` が無い。では何色でクリアされるのか。
+    /// `L3` — `Graphics3D` の下地を呼び手が選べるか。
     ///
-    /// ここは**仕様が書かれていない**ので PASS / FAIL を付けない。
-    /// ただし α だけは判定できる: α が 0 でなければ、この層を `.alpha` で
-    /// 重ねたとき**下の層が最初から見えなくなる**。それは合成の道具として破綻している。
+    /// 報告時（metaphor#830）は `Graphics3D` に `background()` が無く、下地が不透明な黒で
+    /// 固定されていた。α>0 の層を `.alpha` で重ねると**下の層が最初から見えなくなる**のに、
+    /// 回避する口が API に無いのが問題だった。上流は **`Graphics3D.background()` の新設**で
+    /// 解決している（PR #915）。既定のクリアは不透明のままで、透明で始めたい層は
+    /// `background(0, 0, 0, 0)` を明示的に呼ぶ、という約束。
+    /// なので測るのは「既定の α が 0 か」ではなく「**呼べば透明にできるか**」。
     private func checkGraphics3DClear(_ s: Graphics3D) {
         // **図形を 1 つ置く。** `L8` のとおり、図形が 1 つも無いフレームでは
         // クリアがテクスチャへ届かず、前の内容がそのまま残る。
         // 「何も描かずに読む」と、クリア色ではなく残骸を測ることになる。
         // 図形は読み取り点（隅）から遠い中央に置く。
-        s.beginDraw(time: 0)
-        setupCheckCamera(s)
-        s.noLights()
-        s.noStroke()
-        s.fill(Color(SIMD4(1, 1, 1, 1)))
-        s.pushMatrix()
-        s.translate(Float(Self.side) / 2, Float(Self.side) / 2, 0)
-        s.sphere(8, detail: 12)
-        s.popMatrix()
-        s.endDraw(wait: true)
-        guard let c = readback(s.toImage(), 8, 8) else { return }
+        func cornerAfterDraw(clearingToTransparent: Bool) -> Color? {
+            s.beginDraw(time: 0)
+            // `background` は `beginDraw` の直後に置く（描いたあとに呼ぶと塗り潰される）。
+            // 数値版は colorMode に従うので、正規化された値をそのまま渡す Color 版を使う。
+            if clearingToTransparent { s.background(Color(SIMD4(0, 0, 0, 0))) }
+            setupCheckCamera(s)
+            s.noLights()
+            s.noStroke()
+            s.fill(Color(SIMD4(1, 1, 1, 1)))
+            s.pushMatrix()
+            s.translate(Float(Self.side) / 2, Float(Self.side) / 2, 0)
+            s.sphere(8, detail: 12)
+            s.popMatrix()
+            s.endDraw(wait: true)
+            return readback(s.toImage(), 8, 8)
+        }
+
+        guard let byDefault = cornerAfterDraw(clearingToTransparent: false),
+              let cleared = cornerAfterDraw(clearingToTransparent: true) else { return }
         observations.append(Observation(id: "L3.clearColor",
-            detail: "Graphics3D は background() を持たない。何も描かずに beginDraw/endDraw した層の隅 = "
-                + "\(Hue.s((c.r, c.g, c.b, c.a)))"))
-        verdicts.append(Verdict(id: "L3b.clearAlpha", passed: Approx.eq(c.a, 0, 0.01),
-            detail: "クリア後の α = \(Approx.f(c.a, 3)) 期待=0.000"
-                + "（α>0 だと .alpha 合成でこの層が下層を無条件に隠す。下地の色を選ぶ口が無いので回避できない）"))
+            detail: "background() を呼ばずに beginDraw/endDraw した層の隅 = "
+                + "\(Hue.s((byDefault.r, byDefault.g, byDefault.b, byDefault.a)))"))
+        verdicts.append(Verdict(id: "L3b.clearAlpha", passed: Approx.eq(cleared.a, 0, 0.01),
+            detail: "background(0,0,0,0) を呼んだ層の隅の α = \(Approx.f(cleared.a, 3)) 期待=0.000"
+                + " / 呼ばない層の α = \(Approx.f(byDefault.a, 3))"
+                + "（#830 は Graphics3D.background() の新設で解決。既定は不透明のままなので、"
+                + "透明な下地が要る層は明示的に呼ぶ）"))
     }
 
     /// `L1` — 3D オフスクリーンに実際に描け、読み戻せるか。
@@ -613,16 +626,20 @@ final class Darkroom {
             // doc は「B over A」としか言わない。B のカラーが α 乗算済みかは
             // 書かれていないが、**書かれていなくても答えは 1 つに決まる**。
             //
-            // `L7` で実測したとおり、metaphor の 2D キャンバスは半透明の色を
-            // **premultiplied で格納する**（rgb = 指定色 × α）。だから
-            // その層を正しく重ねる式は `B.rgb + A.rgb·(1−B.a)` の方であり、
-            // `B.rgb·B.a + A.rgb·(1−B.a)` を使うと **α を 2 回掛ける**ことになる。
+            // 報告時（metaphor#831）は `MergePass(.alpha)` のシェーダが premultiplied な層に
+            // α を 2 回掛けていた。上流はシェーダを premultiplied 前提の式へ直し（PR #865）、
+            // 同じ頃に **読み戻し（`PixelBuffer`）が straight へ割り戻す**ようになった
+            // （ADR-0012 / #848）。いま成り立っているのは次の 2 つで、混同すると式を間違える:
             //
-            // つまりこれは「流儀が 2 つあってどちらか」ではなく、
-            // **ライブラリの中で焼く側と重ねる側の前提が食い違っているか**の判定。
-            let doubleMultiplied = MergeOracle.alphaStraight(av, bv, b.a)   // α を 2 回掛けた形
-            let correct = MergeOracle.alphaPremultiplied(av, bv, b.a)       // 層の格納形式に合う形
-            let dDouble = Hue.maxDelta(gv, doubleMultiplied)
+            //   - 層の中の格納形式は **premultiplied**（rgb = 指定色 × α）のまま
+            //   - `readTexture` で読み戻した `bv` は **straight**（= 指定色そのもの）
+            //
+            // 突き合わせる相手は「読んだ値」なので、正しい式は straight を α で重ねる
+            // `B.rgb·B.a + A.rgb·(1−B.a)` の方。報告時のコードは `bv` を premultiplied と
+            // 読んでいたため、読み戻しの仕様が変わったいまは **α を 1 回落とした形**になる。
+            let correct = MergeOracle.alphaStraight(av, bv, b.a)             // straight 読み戻しに合う形
+            let missingAlpha = MergeOracle.alphaPremultiplied(av, bv, b.a)   // α を掛け忘れた形
+            let dMissing = Hue.maxDelta(gv, missingAlpha)
             let dCorrect = Hue.maxDelta(gv, correct)
             let consistent = dCorrect <= Hue.composited
             // 「指定した色で重ねたら本来どうなるはずか」も出す。issue に貼る数字はこれ。
@@ -632,15 +649,16 @@ final class Darkroom {
             verdicts.append(Verdict(id: "M4.alpha", passed: consistent,
                 detail: "A=\(Hue.s(av))（不透明）に、指定 rgb=\(Hue.s((Self.colorB.r, Self.colorB.g, Self.colorB.b))) "
                     + "α=\(Approx.f(Self.alphaB, 2)) の層を .alpha で重ねた。"
-                    + "層は premultiplied で格納されている（実測 B=\(Hue.s(bv)) a=\(Approx.f(b.a, 3))）ので、"
+                    + "読み戻しは straight へ割り戻されている（実測 B=\(Hue.s(bv)) a=\(Approx.f(b.a, 3))）ので、"
                     + "正しい合成結果は \(Hue.s(correct)) のはず → 実測=\(Hue.s(gv)) "
-                    + "差=\(Approx.f(dCorrect, 4)) / α をもう一度掛けた形 \(Hue.s(doubleMultiplied)) との差=\(Approx.f(dDouble, 4))"
-                    + (consistent ? "" : " → **α が 2 回掛かっている**（重ねた層が本来より暗くなる）")))
+                    + "差=\(Approx.f(dCorrect, 4)) / α を落とした形 \(Hue.s(missingAlpha)) との差=\(Approx.f(dMissing, 4))"
+                    + (consistent ? "" : " → **合成の α 前提が読み戻しと噛み合っていない**")))
             observations.append(Observation(id: "M5.alphaConvention",
-                detail: "焼く側（Graphics）は premultiplied、重ねる側（MergePass(.alpha)）は straight を前提にしている。"
-                    + "作り手が期待する結果は \(Hue.s(intended))、実際に出るのは \(Hue.s(gv))。"
-                    + "doc には MergePass の α 前提が書かれていないので、"
-                    + "使う側からは「なぜか暗い」としか見えない"))
+                detail: "焼く側（Graphics）は premultiplied で格納し、重ねる側（MergePass(.alpha)）も"
+                    + "premultiplied 前提の式で合成する（#831 は PR #865 で解決）。"
+                    + "読み戻し（PixelBuffer）だけが ADR-0012 / #848 で straight へ割り戻すので、"
+                    + "実測から式を検算するときは「読んだ値は straight・層の中は premultiplied」を区別する。"
+                    + "作り手が期待する結果は \(Hue.s(intended))、実際に出るのは \(Hue.s(gv))"))
             // `M6` — blendType を 4 回差し替えて 4 通りの結果が出た時点で、
             // 実行時変更が効いていることは示せている。
             verdicts.append(Verdict(id: "M6.blendTypeRuntime", passed: true,
