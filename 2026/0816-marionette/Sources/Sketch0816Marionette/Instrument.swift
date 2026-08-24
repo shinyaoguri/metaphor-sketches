@@ -48,15 +48,18 @@ enum Instrument {
 
     /// P1: フレーム時間が揺れても同じ結果になるか。
     ///
-    /// `Physics2D` は `SketchSubsystem` として `update(deltaTime:)` で実フレーム時間を
-    /// そのまま `step(dt)` に渡す。同じ 10 秒を「一定 1/60」と「1/120 と 1/40 の交互
-    /// （平均 1/60）」で刻み、落下距離が一致するかを見る。
+    /// metaphor#756 は **`advance(_:iterations:)` の新設**で解決した。実フレーム時間を渡す口は
+    /// こちらで、内部で `fixedTimeStep`（既定 1/120・最大 8 サブステップ）へ割り直してから積む。
+    /// `step(_:iterations:)` は「刻みを呼び手が持つ」低レベル API として据え置かれたので、
+    /// ジッタ非依存を測るなら `advance()` を通す（`step()` を直接叩くと修正経路を通らない）。
+    /// 同じ 10 秒を「一定 1/60」と「1/120 と 1/40 の交互（平均 1/60）」で刻み、
+    /// 落下距離が一致するかを見る。
     static func timestepJitter() -> Verdict {
         func fall(_ steps: [Float]) -> Float {
             let world = Physics2D(cellSize: 50)
             world.setGravity(0, -1000)
             let body = world.addCircle(x: 0, y: 0, radius: 1)
-            for dt in steps { world.step(dt, iterations: 0) }
+            for dt in steps { world.advance(dt, iterations: 0) }
             return body.position.y
         }
 
@@ -70,15 +73,19 @@ enum Instrument {
         return Verdict(
             id: "P1.timestepJitter",
             passed: passed,
-            detail: String(format: "steadyY=%.1f jitteredY=%.1f ratio=%.3f", steady, jittered, ratio)
+            detail: String(
+                format: "advance() 経由 steadyY=%.1f jitteredY=%.1f ratio=%.3f", steady, jittered, ratio
+            )
         )
     }
 
-    /// P2: `velocity` の単位は px/秒 か px/ステップ か。
+    /// P2: `velocity` の単位は doc どおり px/ステップ か。
     ///
-    /// doc は「Verlet の位置差から導かれる速度」としか書かない。重力 1000 で
-    /// ちょうど 1 秒落としたときの値が -1000（px/秒）に近いのか、
-    /// -1000/60（px/ステップ）に近いのかを測る。
+    /// 報告時（metaphor#756 の後半）は doc が「Verlet の位置差から導かれる速度」としか
+    /// 書いておらず、px/秒 とも読めた。いまは **per-step であることが doc で確定している**
+    /// （`PhysicsBody2D.velocity`: "The unit is displacement per step, not per second"）。
+    /// 重力 1000 でちょうど 1 秒落とし、-1000（px/秒）と -1000/60（px/ステップ）の
+    /// どちらに寄るかを測って、doc の宣言と実装が合っているかを見る。
     static func velocityUnits() -> Verdict {
         let world = Physics2D(cellSize: 50)
         world.setGravity(0, -1000)
@@ -88,14 +95,14 @@ enum Instrument {
         let measured = body.velocity.y
         let perSecond: Float = -1000
         let perStep: Float = -1000.0 / 60.0
-        let looksPerSecond = abs(measured - perSecond) < abs(measured - perStep)
+        let looksPerStep = abs(measured - perStep) < abs(measured - perSecond)
 
         return Verdict(
             id: "P2.velocityUnits",
-            passed: looksPerSecond,
+            passed: looksPerStep,
             detail: String(
-                format: "velocity.y=%.4f  px/sec想定=%.2f  px/step想定=%.4f  → %@",
-                measured, perSecond, perStep, looksPerSecond ? "px/sec" : "px/step"
+                format: "velocity.y=%.4f  px/step想定=%.4f  px/sec想定=%.2f  → %@（doc の宣言は per-step）",
+                measured, perStep, perSecond, looksPerStep ? "px/step" : "px/sec"
             )
         )
     }
@@ -260,33 +267,42 @@ enum Instrument {
         )
     }
 
-    /// P4: `bounds` で壁に押し戻したとき、速度も殺されるか。
+    /// P4: `bounds` の壁は跳ね返り係数どおりに弾き返すか。
     ///
-    /// クランプが位置だけを動かして `previousPosition` を据え置くと、壁の中に
-    /// 速度が残り続ける（＝離した瞬間に飛び出す / エネルギーが消えない）。
+    /// 報告時（metaphor#755）は壁のクランプが位置だけを動かし `previousPosition` を据え置いて
+    /// いたので、壁の中に速度が残り続けた（＝離した瞬間に飛び出す / エネルギーが消えない）。
+    /// v0.10.0 の修正で **壁にも `restitution` / `friction` が効く**ようになり
+    /// （`applyWallResponse`）、壁自身は係数を持たないのでボディ側の値がそのまま使われる。
+    /// 重力を切り、壁にちょうど接した球へ既知の接近速度 v を与えて 1 ステップ進め、
+    /// 速度が −v → +e·v へ反転するかを見る（`restitution` の既定は 0.5）。
     static func boundsEnergy() -> Verdict {
-        let world = Physics2D(cellSize: 50)
-        world.bounds = (min: SIMD2(-1000, -1000), max: SIMD2(100, 1000))
+        /// 右の壁（x = 100 − r = 90）に接した球へ 1 ステップあたり v の接近速度を与え、
+        /// 跳ね返ったあとの速度を返す。
+        func bounceBack(restitution e: Float, approach v: Float) -> Float {
+            let world = Physics2D(cellSize: 50)
+            world.bounds = (min: SIMD2(-1000, -1000), max: SIMD2(100, 1000))
 
-        let body = world.addCircle(x: 0, y: 0, radius: 10)
-        // 1 ステップあたり 20 で右へ進む初速を与える
-        body.previousPosition = SIMD2(-20, 0)
+            let body = world.addCircle(x: 90, y: 0, radius: 10)  // ちょうど壁に接している
+            body.restitution = e
+            body.friction = 0
+            body.previousPosition = SIMD2(90 - v, 0)  // 1 ステップあたり v だけ壁へ向かう
 
-        var speedBefore: Float = 0
-        for i in 0..<20 {
-            if i == 3 { speedBefore = simd_length(body.velocity) }
             world.step(1.0 / 60.0)
+            return body.velocity.x
         }
-        // 壁（x = 100 - r = 90）に張り付いたあとの残留速度
-        let speedAfter = simd_length(body.velocity)
-        let stuckAtWall = abs(body.position.x - 90) < 0.001
-        let passed = stuckAtWall && speedAfter < 0.5
+
+        let v: Float = 20
+        let bounced = bounceBack(restitution: 0.5, approach: v)  // 既定の跳ね返り
+        let dead = bounceBack(restitution: 0, approach: v)       // 完全非弾性なら速度は死ぬ
+        let ratio = -bounced / v
+        let passed = abs(ratio - 0.5) < 0.05 && abs(dead) < 0.5
 
         return Verdict(
             id: "P4.boundsEnergy",
             passed: passed,
             detail: String(
-                format: "x=%.3f (壁=90) 速度 前=%.2f 後=%.2f", body.position.x, speedBefore, speedAfter
+                format: "接近 v=%.0f → e=0.5 で %.2f（比 %.3f・期待 0.500）/ e=0 で %.2f（期待 0）",
+                v, bounced, ratio, dead
             )
         )
     }

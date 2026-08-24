@@ -185,7 +185,7 @@ final class Sketch0816Marionette: Sketch, LinkPainter {
             let intensity = flash.value
             push()
             noLights()
-            fill(Color(r: 0.7, g: 0.8, b: 1.0, a: intensity * 0.5))
+            fill(Color(r: 0.7, g: 0.8, b: 1.0, alpha: intensity * 0.5))
             translate(width * 0.5, height * 0.5)
             rect(0, 0, width, height)
             pop()
