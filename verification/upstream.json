@@ -1699,6 +1699,72 @@
         "verdict": null,
         "note": ""
       }
+    },
+    {
+      "repo": "shinyaoguri/metaphor-cli",
+      "issue": 189,
+      "title": "窓枠・タイトルバーの押下が子スケッチへ転送され、リサイズ後に isMousePressed が真のまま残る",
+      "sketch": "2026/0824-insignia",
+      "ourIssue": 27,
+      "oracle": {
+        "kind": "manual",
+        "how": "metaphor watch でビューアを出し、窓をマウスでリサイズしてからボタンを押さずにカーソルを動かす。直っていればオブジェクトは回らない。作品側は INSIGNIA_INPUTLOG=1 で mouseDown / mouseUp の到着を数えられる（`[input] 押していない移動が…` が出なくなるのが直った印）。ビューアの窓枠押下が転送されなくなったかは ViewerWindow.handle(_:) が canvasCoordinateInsideView を通すようになったかで見る"
+      },
+      "baseline": {
+        "metaphor": "0.13.0",
+        "verdict": "FAIL",
+        "note": "リサイズ後、押していないマウス移動だけでカメラが回り続ける。同じイベント列（mouseDown → mouseUp 無し → mouseMove ×60）を tools/replay-input.py stuck で再生すると方位角が -25.26 rad（4 回転）動いた"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": ""
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 1099,
+      "title": "OrbitCamera.damping が実効感度を 1/(1-damping) 倍にする (慣性のつまみが感度も変える)",
+      "sketch": "2026/0824-insignia",
+      "ourIssue": 27,
+      "oracle": {
+        "kind": "manual",
+        "how": "tools/replay-input.py drag を、App.swift の `sensitivity = 0.005 * (1 - damping)` の補正を外した状態で走らせる。直っていれば補正なしでも 600px のドラッグが -3.0 rad（= 600 × 0.005）になる"
+      },
+      "baseline": {
+        "metaphor": "0.13.0",
+        "verdict": "FAIL",
+        "note": "damping 0.86 / sensitivity 0.005 で 600px ドラッグすると -25.36 rad（4.0 回転）。期待は -3.0 rad。sensitivity を (1-damping) 倍すると -3.00 rad に一致する"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": ""
+      }
+    },
+    {
+      "repo": "shinyaoguri/metaphor",
+      "issue": 1100,
+      "title": "orbitControl() が押下フレームの座標の飛びをドラッグとして回す",
+      "sketch": "2026/0824-insignia",
+      "ourIssue": 27,
+      "oracle": {
+        "kind": "manual",
+        "how": "tools/replay-input.py press を、App.swift の押下フレームのガード（pressArrived）を外した状態で走らせる。直っていればガード無しでも方位角が動かない"
+      },
+      "baseline": {
+        "metaphor": "0.13.0",
+        "verdict": "FAIL",
+        "note": "起動直後（pmouse=0）にキャンバス中央 (640,400) で 1 回押しただけ、移動も解放もしていない状態で方位角が -3.2000 rad 動く（= 640px × 0.005）。期待は 0"
+      },
+      "recheck": {
+        "at": null,
+        "against": null,
+        "verdict": null,
+        "note": ""
+      }
     }
   ]
 }

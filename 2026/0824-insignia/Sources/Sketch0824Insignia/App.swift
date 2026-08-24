@@ -131,6 +131,11 @@ final class Sketch0824Insignia: Sketch {
         orbitCamera.minDistance = 3.4 * worldScale
         orbitCamera.maxDistance = 26 * worldScale
         orbitCamera.damping = 0.86
+        // damping は**生の差分を速度に足すだけで利得を補正しない**。
+        // 定常状態の速度は 1/(1 - damping) 倍になるので、0.86 のままだと
+        // ドラッグ量の 7.1 倍回ってしまう。感度側で割って 1:1 に戻す
+        // （慣性の余韻は残したまま、総回転量が damping 無しと一致する）。
+        orbitCamera.sensitivity = 0.005 * (1 - orbitCamera.damping)
         orbitCamera.zoomSensitivity = 0.6
 
         let initial = pose(for: views[0])
@@ -174,6 +179,10 @@ final class Sketch0824Insignia: Sketch {
         drawOverlay()
         emitProbes()
 
+        if inputLogEnabled, frameCount % 30 == 0 {
+            logInput("tick")
+        }
+
         captureIfRequested()
         flushPendingSave()
     }
@@ -208,8 +217,92 @@ final class Sketch0824Insignia: Sketch {
         }
 
         orbitCamera.target = center()
+
+        let held = (azimuth: orbitCamera.azimuth, elevation: orbitCamera.elevation)
         orbitControl()  // ドラッグで軌道回転、ホイールでズーム
+
+        // `orbitControl()` は「押下中か」と「前フレームからの移動量」だけで回すので、
+        // 押下状態や座標が飛ぶと、こちらの意図と無関係に回る。3 段で受け止める。
+        let pressedNow = pressArrived
+        pressArrived = false
+        if buttonStateSuspect || pressedNow {
+            // (1) 押されていないのに押下中とされているフレーム、(2) 押下が届いたフレーム。
+            //     後者は「押した瞬間」であってドラッグではない（カーソルが前回位置から
+            //     離れていると、その差がまるごと回転として入ってしまう）。
+            //     どちらも回転だけ戻し、慣性も捨てる。ズームは戻さないのでホイールは効く。
+            orbitCamera.reset(
+                distance: orbitCamera.distance, azimuth: held.azimuth, elevation: held.elevation)
+        } else {
+            // (3) 念のための上限。1 フレームで 0.25rad（約 14°）を超える回転は
+            //     入力の飛びとみなして頭を押さえる。素直なドラッグでは届かない値。
+            // 1 フレームのあいだに角度が 2π を跨ぐことは無いので、生の差で見る
+            // （shortestArc で畳むと、-3.2rad の飛びが +0.25rad の回転に化ける）。
+            let maxStep: Float = 0.25
+            let dAz = orbitCamera.azimuth - held.azimuth
+            if abs(dAz) > maxStep {
+                orbitCamera.azimuth = held.azimuth + (dAz < 0 ? -maxStep : maxStep)
+            }
+            let dEl = orbitCamera.elevation - held.elevation
+            if abs(dEl) > maxStep {
+                orbitCamera.elevation = held.elevation + (dEl < 0 ? -maxStep : maxStep)
+            }
+        }
+        camera(eye: orbitCamera.eye, center: orbitCamera.target, up: orbitCamera.up)
     }
+
+    // MARK: - マウスの取りこぼし対策
+
+    /// metaphor 側の「ボタン押下中」が現実とずれている疑いがあるか。
+    ///
+    /// ライブビューア（`metaphor watch`）は窓宛の NSEvent をローカルモニタで捕まえて
+    /// 子スケッチへ転送するが、**窓枠やタイトルバーを掴んだ押下も転送される**一方で、
+    /// リサイズ／移動のあいだ AppKit が回す内部トラッキングループはモニタを素通りするため、
+    /// 対応する mouseUp が届かない。結果 `isMousePressed` が立ちっぱなしになり、
+    /// **ボタンを押していないマウス移動だけでカメラが回り続ける**。
+    ///
+    /// スケッチ側から metaphor の押下状態は消せないので、矛盾を見つけて回転だけ打ち消す。
+    /// 「押していない移動」として `mouseMoved()` が来たのに `isMousePressed` が真、が矛盾の印。
+    private var buttonStateSuspect = false
+
+    /// 押下がこのフレームに届いたか（押した瞬間をドラッグとして扱わないための印）。
+    private var pressArrived = false
+
+    func mousePressed() {
+        buttonStateSuspect = false  // 本物の押下が来た = 状態は信用できる
+        pressArrived = true
+        logInput("mousePressed")
+    }
+
+    func mouseReleased() {
+        buttonStateSuspect = false
+        logInput("mouseReleased")
+    }
+
+    func mouseDragged() {
+        buttonStateSuspect = false
+        logInput("mouseDragged")
+    }
+
+    func mouseMoved() {
+        if isMousePressed, !buttonStateSuspect {
+            buttonStateSuspect = true
+            print("[input] 押していない移動が来たのに isMousePressed が真。回転を打ち消す")
+            fflush(stdout)
+        }
+        logInput("mouseMoved")
+    }
+
+    /// `INSIGNIA_INPUTLOG=1` のとき、マウスイベントの到着を素で流す。
+    /// 「どのイベントが落ちているか」を数えるための口。
+    private func logInput(_ name: String) {
+        guard inputLogEnabled else { return }
+        print(
+            "[input] \(name) frame=\(frameCount) isMousePressed=\(isMousePressed) "
+                + "suspect=\(buttonStateSuspect) azimuth=\(String(format: "%.4f", orbitCamera.azimuth))")
+        fflush(stdout)
+    }
+
+    private let inputLogEnabled = ProcessInfo.processInfo.environment["INSIGNIA_INPUTLOG"] == "1"
 
     /// プリセットの方向ベクトルから、オービットカメラの角度へ。
     private func pose(for view: PresetView) -> CameraPose {
@@ -323,6 +416,7 @@ final class Sketch0824Insignia: Sketch {
         probe("worldScale", worldScale)
         probe("shadows", shadowsOn)
         probe("autoRotate", autoRotate)
+        probe("input.buttonStateSuspect", buttonStateSuspect)
     }
 
     // MARK: - 入力

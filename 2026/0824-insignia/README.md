@@ -47,7 +47,18 @@ tools/probe.sh shots      # the four presets into output/
 tools/probe.sh contrast   # the shadow experiment: worldScale 120 vs 1
 tools/probe.sh frames     # one full turn as a numbered PNG sequence
 tools/probe.sh soak 180   # unattended run, RSS/CPU into a CSV
+tools/replay-input.py     # replay the viewer's input events with no GUI at all
 ```
+
+`replay-input.py` is how the mouse bugs below were found and fixed. `METAPHOR_VIEWER=1` makes the
+sketch read the same JSON-Lines input stream the live viewer sends, so a pathological event
+sequence can be replayed and measured without touching a mouse:
+
+| Sequence | Camera azimuth after 600px of input |
+|---|---|
+| `stuck` — `mouseDown`, then `mouseMove` with no `mouseUp` | 0 rad (was -25.26 before the fixes) |
+| `drag` — `mouseDown` → `mouseDrag` ×60 → `mouseUp` | -3.00 rad = 600px × 0.005 rad/px |
+| `press` — a single `mouseDown`, nothing else | 0 rad (was -3.20) |
 
 Environment hooks: `INSIGNIA_SHOTS=1`, `INSIGNIA_FRAMES=<dir>`, `INSIGNIA_SCALE=<float>`,
 `INSIGNIA_SHADOWS=0|1`, `INSIGNIA_FLOOR=1`, `INSIGNIA_TRANSPARENT=1`, `INSIGNIA_SPIN=1`.
@@ -98,6 +109,17 @@ decided by arithmetic rather than by looking.
 - **`b` (transparent save) is kept even though it does nothing.** `background(r, g, b, 0)` still
   produces a fully opaque PNG — [metaphor#1097](https://github.com/shinyaoguri/metaphor/issues/1097).
   The code path stays so the claim can be re-measured when that changes.
+- **`orbitControl()` is wrapped in three guards.** It rotates purely from "is the button down"
+  and "how far did the cursor move since last frame", so it turns whenever either of those lies:
+  a stale button state (the live viewer forwards window-frame clicks and loses the matching
+  mouse-up when you resize the window — [metaphor-cli#189](https://github.com/shinyaoguri/metaphor-cli/issues/189)),
+  and the press frame itself, where the cursor position jumps to wherever it was clicked
+  ([metaphor#1100](https://github.com/shinyaoguri/metaphor/issues/1100)). The third guard is a
+  0.25 rad/frame ceiling as a backstop. Without them, resizing the viewer window left the object
+  spinning at drag speed from bare mouse movement.
+- **`orbitCamera.sensitivity` is divided by `(1 - damping)`.** `damping` accumulates raw deltas
+  into a velocity without compensating the gain, so it multiplies effective sensitivity by
+  `1/(1 - damping)` — 7.1× at 0.86 — [metaphor#1099](https://github.com/shinyaoguri/metaphor/issues/1099).
 - **The tube radius is snapped to exactly 0 at `t = 0` and `t = 1`.** `sqrt(1 − u²)` picks up a
   1e-8 residual just short of `u = 1`, and the square root lifts it to 1e-4 — a ring 0.0003 across
   where a point belongs. Invisible, but it stops being a closed solid, and `G6` fails on it.
@@ -110,3 +132,4 @@ decided by arithmetic rather than by looking.
 | `Sources/Sketch0824Insignia/Instrument.swift` | the deterministic checks |
 | `Sources/Sketch0824Insignia/App.swift` | the viewer — camera, lights, presets, input, capture |
 | `tools/probe.sh` | observing it without a viewer |
+| `tools/replay-input.py` | replaying the viewer's input stream headlessly (kept as the repro for the mouse bugs) |
