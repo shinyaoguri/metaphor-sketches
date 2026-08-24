@@ -6,6 +6,7 @@
     "oracle.kind:",
     "  check  — 作品の自己検査 ID で機械判定できる。ids に判定に使う ID を並べる",
     "  manual — 目視や個別手順が要る。how に「何を見れば直ったと言えるか」を書く",
+    "oracle.verdictCommand / oracle.verdictPattern — 省略時は sketches の設定を使う。入力注入が要る検査のように、同じ作品でも検査 ID ごとに判定コマンドが違うときだけ上書きする",
     "baseline — 報告した時点の実測。recheck — 直近の再検証。未実施なら at が null"
   ],
   "sketches": {
@@ -82,7 +83,8 @@
         "ids": [
           "P3.restitution",
           "P3b.restitutionMechanism",
-          "P3c.friction"
+          "P3c.friction",
+          "P4.boundsEnergy"
         ]
       },
       "baseline": {
@@ -91,10 +93,10 @@
         "note": "接近速度によらず跳ね返り 0.000、friction=0 と 1 が完全同値"
       },
       "recheck": {
-        "at": "2026-08-17",
-        "against": "main (d4faf3e)",
+        "at": "2026-08-24",
+        "against": "v0.13.0",
         "verdict": "PASS",
-        "note": "P3.restitution / P3b.restitutionMechanism / P3c.friction が FAIL → PASS。e=0.9 の落下で跳ね上がり比 0.807（期待 0.810）、friction=0 → 横速度 8.0000 / friction=1 → 0.0000。v0.10.0 は未リリース（PR #931 が開いている）"
+        "note": "P3 系に加えて P4.boundsEnergy も PASS。同じ修正で world bounds の壁にも restitution / friction が 効くようになった（applyWallResponse。壁は係数を持たないのでボディ側の値を使う）ため、「壁に張り付いて速度が死ぬ」を期待していた P4 は issue #21 で跳ね返り係数を測る形へ書き換えた。実測: 接近 v=20 → e=0.5 で -10.00（比 0.500・期待 0.500）/ e=0 で 0.00。P3 は e=0.9 の落下で跳ね上がり比 0.807（期待 0.810）"
       }
     },
     {
@@ -116,10 +118,10 @@
         "note": "同じ 10 秒・同じ平均 dt で落下距離が 25% ずれる / velocity は px/ステップ"
       },
       "recheck": {
-        "at": "2026-08-17",
-        "against": "main (d4faf3e)",
-        "verdict": "PASS（修正は入っている / 検査が古い）",
-        "note": "上流は Physics2D.advance(_:) を新設して固定刻み（既定 1/120・最大 8 サブステップ）で積むよう直し、step(_:iterations:) は低レベル API として据え置いた（c2493e3）。こちらの P1.timestepJitter は step() を直接叩くので修正経路を通らず FAIL のまま（ratio=1.249 — 報告時と同値）。P2.velocityUnits も velocity が per-step だと doc で確定した（PhysicsBody2D.swift:106-111）ので px/sec を期待する検査側が古い。→ 検査を advance() 経由へ書き換える"
+        "at": "2026-08-24",
+        "against": "v0.13.0",
+        "verdict": "PASS",
+        "note": "検査を advance() 経由へ書き換えて PASS（issue #21）。実フレーム時間を渡す口は Physics2D.advance(_:iterations:) で、内部で fixedTimeStep へ割り直してから積む。step(_:iterations:) は刻みを呼び手が持つ低レベル API として据え置き。実測: advance() 経由で steadyY=-50123.7 jitteredY=-50040.0 ratio=0.998（step() 直叩きの報告時は 1.249）。P2 は doc が per-step と確定したので単位の宣言と実装の一致を見る形へ。実測 velocity.y=-16.6665 → px/step"
       }
     },
     {
@@ -661,10 +663,10 @@
         "note": "spectrum は生きているのに bandEnergy だけ 0.00000。誤設定と無エネルギーが区別できない"
       },
       "recheck": {
-        "at": "2026-08-17",
-        "against": "main (d4faf3e)",
-        "verdict": "PASS（修正は入っている / 検査が古い）",
-        "note": "上流は『黙って 0 を返す』のをやめる形で解決（PR #790 / 25ad2f8）。実行ログに警告が出るのを確認（[MetaphorAudio] Warning: bandEnergy(lowFreq:highFreq:) returned 0 because the sample rate is unknown …）。戻り値は 0 のままなので、非 0 を期待する A3.bandEnergyWithoutSampleRate は FAIL のまま。→ 検査を警告の有無で判定する形へ書き換える"
+        "at": "2026-08-24",
+        "against": "v0.13.0",
+        "verdict": "PASS",
+        "note": "検査を「警告が出るか」で判定する形へ書き換えて PASS（issue #21）。解決の形は 「戻り値 0 は据え置いたまま警告を出す」（PR #790）なので、非 0 を期待する検査では永久に FAIL のままだった。警告は debugWarning から stdout へ出るため、検査は bandEnergy 呼び出しの間だけ stdout を横取りして拾う。実測: bandEnergy=0.00000 / spectrum は生きている=true / 警告=出た"
       }
     },
     {
@@ -686,10 +688,10 @@
         "note": "sample() が origin/sampleScale を無視。64 点の行で grid と sample の最大差 0.26009"
       },
       "recheck": {
-        "at": "2026-08-17",
-        "against": "main (d4faf3e)",
-        "verdict": "PASS（docs で確定 / 検査が古い）",
-        "note": "上流は docs で解決（2b7a07e『sample(x:y:) と grid 系が別座標系であることを明記』）。挙動は変わらないので N8.originScope / N9.gridMatchesSample は FAIL のまま（grid と sample の最大差 0.26009 — 報告時と同値）。→ 別座標系である前提へ検査を書き換える"
+        "at": "2026-08-24",
+        "against": "v0.13.0",
+        "verdict": "PASS",
+        "note": "検査を「docs が約束する形で食い違うはず」へ向け直して PASS（issue #21）。上流は docs で確定する形で解決（2b7a07e「Two entry points, two coordinate spaces」）— sample(x:y:) は origin も sampleScale も適用せず、重なるのは index (0,0) の 1 点だけ。実測: N8 は sample() が無視=true / sampleGrid が反映=true、N9 は grid[0]==sample(origin)=true・col≥1 の最大差 0.26009（報告時と同値）で別座標系として食い違う"
       }
     },
     {
@@ -699,10 +701,8 @@
       "sketch": "2026/0816-sounding",
       "ourIssue": 11,
       "oracle": {
-        "kind": "check",
-        "ids": [
-          "N15.configResetsComposition"
-        ]
+        "kind": "manual",
+        "how": "metaphor の llms.txt で NoiseConfig の config setter の項を引き、doc コメントの Note / Important が本文として出ているかを見る。要約 1 行だけなら未解決。（旧 oracle の N15.configResetsComposition は invertApplied で合否を決めており llms.txt を一切見ていないので、#786 が OPEN のままでも PASS と出ていた）"
       },
       "baseline": {
         "metaphor": "0.9.0",
@@ -794,7 +794,8 @@
         "kind": "check",
         "ids": [
           "I3.pmouse"
-        ]
+        ],
+        "verdictCommand": "tools/probe.sh input"
       },
       "baseline": {
         "metaphor": "0.9.0",
@@ -802,10 +803,10 @@
         "note": "こちらの起票ではなく既出（2026-08-12 に CLOSED）。v0.9.0 では未リリースのため再現する。main では PASS になることを swift package edit で A/B 済み。最小再現は 2026/0816-probe-frameloop の PROBE=pmouse"
       },
       "recheck": {
-        "at": "2026-08-16",
-        "against": "main (db7bd76)",
+        "at": "2026-08-24",
+        "against": "v0.13.0",
         "verdict": "PASS",
-        "note": "InputManager.endFrame() の追加（PR #534）で lag 2 → 1。0.9.0 では FAIL のまま"
+        "note": "機械判定で PASS。I3.pmouse は入力注入が要るので tools/probe.sh check には出ず input モードでのみ出る。台帳の verdictCommand は作品単位だったため判定を拾えていなかったので、issue #21 で oracle 側の上書き（oracle.verdictCommand）を足して input モードで拾えるようにした"
       }
     },
     {
@@ -865,10 +866,10 @@
         "note": "形式外 8 件中 4 件が色として通る（\"#F\" / \"#FFF\" / \"#12345\" / \"#1234567\"）。main 28b44e5 でも同じ実装"
       },
       "recheck": {
-        "at": "2026-08-17",
-        "against": "main (d4faf3e)",
-        "verdict": "PASS（報告した症状は解消 / 検査が古い）",
-        "note": "\"#FFF\" が青ではなく白 (1.000, 1.000, 1.000) になった。形式外 8 件のうち色として通るのは \"#FFF\" 1 件だけで、報告時の 4 件から減った。3 桁を CSS 短縮形として意図的に受けることが Color.swift:160-167 に明記されたので、\"#RRGGBB\"/\"#AARRGGBB\" だけを想定する A12.hexStringInvalid が古い。→ 検査を 3 桁許容へ更新"
+        "at": "2026-08-24",
+        "against": "v0.13.0",
+        "verdict": "PASS",
+        "note": "検査を 3 桁許容へ書き換えて PASS（issue #21）。3 桁は CSS と同じ短縮形として意図的に受け、4 桁は AARRGGBB と RRGGBBAA のどちらとも読めるので明示的に拒む、と doc で確定している。実測: 形式外 9 件（1/4/5/7 桁・16 進以外・符号つき）すべて nil、\"#FFF\"→(1.000, 1.000, 1.000) / \"#0AF\"→(0.000, 0.667, 1.000)"
       }
     },
     {
@@ -963,10 +964,10 @@
         "note": "w=-120 の点で screenZ=1.535 / screenX=120.4（中心の左へ回る）"
       },
       "recheck": {
-        "at": "2026-08-17",
-        "against": "main (d4faf3e)",
-        "verdict": "PASS（isInFront 新設で解決 / 検査が古い）",
-        "note": "上流は screenPosition の値を変えるのではなく isInFront(_:_:_:) を足す形で解決（307bcf2 / PR #873。Canvas3D+Transform.swift:186 ほか 3 箇所に生えている）。旧挙動を期待する D5c.screenZBehindCamera は FAIL のまま（背後 w=-120.00 で screenZ=1.535）。→ 検査を isInFront 前提へ書き換える"
+        "at": "2026-08-24",
+        "against": "v0.13.0",
+        "verdict": "PASS",
+        "note": "検査を isInFront 前提へ書き換えて PASS（issue #21）。上流は screenPosition の値を変えず isInFront(_:_:_:) を足す形で解決（307bcf2 / PR #873）なので、背後の判別は述語で行う。実測: isInFront 背後=false / 手前=true。背後の値そのものは報告時のまま （w=-120.00 screenZ=1.535 screenX=120.4）で detail に残している"
       }
     },
     {
@@ -1085,10 +1086,10 @@
         "note": "画面中心に置いた板の中心が (-640, +360) px ずれる（ちょうど半画面）"
       },
       "recheck": {
-        "at": "2026-08-17",
-        "against": "main (d4faf3e)",
-        "verdict": "PASS（実測は中央 / 検査の解析モデルが古い）",
-        "note": "レンダリング実測では被写体が画面中央に来る（D2.orthoDefault: 実測中心=(640.0, 360.0) 幅=200.0px / 画面は 1280x720）。FAIL のままの D2b.orthoDefaultOffCenter は withDefaultOrtho() というスケッチ側の解析モデル（旧既定の複製）と比べており、ライブラリを測っていない（解析上の中心=(0.0, 720.0)）。→ 検査を実測ベースへ書き換える"
+        "at": "2026-08-24",
+        "against": "v0.13.0",
+        "verdict": "PASS",
+        "note": "PASS。上流は ortho() の省略時範囲を原点を挟む対称範囲へ直した（v0.10.0。near/far も 固定 ±1000 から既定カメラ基準 ±defaultCameraZ×10 へ）。issue #21 では 2 つ直した: D2b の合否をレンダリング実測ベースへ移し、スケッチ側の解析モデル withDefaultOrtho() も 新しい既定へ更新した（旧既定の複製のままだと「ライブラリではなく自分の複製」を測ることになる）。実測: 実測中心のずれ=(0.0, 0.0) px・解析モデルの予測も (0.0, 0.0) px で一致"
       }
     },
     {
@@ -1209,10 +1210,10 @@
         "note": "図形を 1 つ置いたフレームの隅 = (0.000,0.000,0.000,a=1.000)。α を 0 にする口が API に無い"
       },
       "recheck": {
-        "at": "2026-08-17",
-        "against": "main (d4faf3e)",
-        "verdict": "PASS（background() 新設で解決 / 検査が古い）",
-        "note": "上流は Graphics3D.background() を足す形で解決（91c1ea8 / PR #915。Graphics3D.swift:183 ほか）。既定のクリア α が 0 になることを期待する L3b.clearAlpha は FAIL のまま（クリア後 α=1.000）。→ 検査を background() で下地を選べるか見る形へ書き換える"
+        "at": "2026-08-24",
+        "against": "v0.13.0",
+        "verdict": "PASS",
+        "note": "検査を background() 前提へ書き換えて PASS（issue #21）。上流は Graphics3D.background() を足す形で解決（91c1ea8 / PR #915）。既定のクリアは不透明のままで、透明で始めたい層は background(0, 0, 0, 0) を明示的に呼ぶ、という約束なので、測る先は「既定の α が 0 か」ではなく「呼べば透明にできるか」。実測: 呼んだ層の隅の α=0.000 / 呼ばない層は α=1.000"
       }
     },
     {
@@ -1233,10 +1234,10 @@
         "note": "A=(0.600,0.200,0.102) に premultiplied な B=(0.102,0.400,0.200,a=0.502) を .alpha で重ねて実測 (0.349,0.302,0.153)。正しくは (0.401,0.500,0.251)"
       },
       "recheck": {
-        "at": "2026-08-17",
-        "against": "main (d4faf3e)",
-        "verdict": "PASS（シェーダは修正済み / 検査が読み戻しに惑わされている）",
-        "note": "MetaphorMerge.metal の BLEND_ALPHA は premultiplied 前提の式に直っている（23d7870 / PR #865。ビルド成果物 metaphor_MetaphorCore.bundle/ShaderSources/merge.txt が修正版であることも確認）。M4.alpha が FAIL なのは、読み戻し（PixelBuffer）が ADR-0012 / #848 で straight へ割り戻すようになったため、検査が層の格納値を straight と取り違えているから。実測合成 (0.400, 0.498, 0.251) は premultiplied 格納値から計算した正しい結果 (0.400, 0.499, 0.252) と 0.001 以内で一致する。→ 検査を straight 読み戻し前提へ書き換える"
+        "at": "2026-08-24",
+        "against": "v0.13.0",
+        "verdict": "PASS",
+        "note": "検査を straight 読み戻し前提へ書き換えて PASS（issue #21）。シェーダは premultiplied 前提の式へ直っている（23d7870 / PR #865）一方、読み戻し（PixelBuffer）は ADR-0012 / #848 で straight へ割り戻すようになった。層の中は premultiplied・読んだ値は straight なので、実測と突き合わせる式は B.rgb·B.a + A.rgb·(1−B.a) の方。実測: 合成 (0.400, 0.498, 0.251) vs 正しい式 (0.401, 0.499, 0.252) 差=0.0012（α を落とした形との差は 0.3976）"
       }
     },
     {

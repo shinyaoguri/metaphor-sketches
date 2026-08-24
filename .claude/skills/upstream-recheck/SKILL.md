@@ -20,6 +20,11 @@ description: "上流 (metaphor / metaphor-cli) で報告した Issue が直っ�
 `sketches` には作品ごとの判定コマンドと、その出力から `PASS` / `FAIL` を拾う正規表現を持たせる
 （marionette は標準出力、adversary は frame.json 経由と、出し方が違うため）。
 
+**同じ作品でも検査 ID ごとに出し方が違うことがある。** そのときはエントリ側の
+`oracle.verdictCommand` / `oracle.verdictPattern` で上書きする（省略時は `sketches` の設定）。
+例: escapement の `I3.pmouse` は入力注入が要るので `tools/probe.sh check` には出ず、
+`tools/probe.sh input` で出る。`recheck.py` は必要なコマンドだけを追加で走らせて結果をまとめる。
+
 **上流へ Issue を出したら、その場で台帳へ追加する。** 後からでは baseline が思い出せない。
 
 ## 1. 検知

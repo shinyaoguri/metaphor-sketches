@@ -57,6 +57,36 @@ def swap_out(sketch_dir: pathlib.Path) -> None:
         print(f"!! unedit に失敗した。手で戻すこと: {result.stderr.strip()}", file=sys.stderr)
 
 
+def build_errors(build: subprocess.CompletedProcess, limit: int = 40) -> list[str]:
+    """ビルド出力から `error:` 行だけを重複なしで抜き出す。
+
+    同じ診断がサブプロセスごとに繰り返し出るので畳む。1 件も拾えなければ空を返す
+    （呼び出し側が生ログへ案内する）。
+    """
+    output = (build.stdout or "") + "\n" + (build.stderr or "")
+    seen: set[str] = set()
+    errors: list[str] = []
+    for line in output.splitlines():
+        line = line.strip()
+        if ": error:" not in line or line in seen:
+            continue
+        seen.add(line)
+        errors.append(line)
+    return errors[:limit]
+
+
+def verdict_source(entry: dict, config: dict) -> tuple[str, str]:
+    """このエントリの判定に使うコマンドとパターン。
+
+    既定は作品単位（台帳の `sketches`）。ただし入力注入が要る検査のように
+    **同じ作品でも検査 ID ごとに出し方が違う**ものがあるので、
+    エントリの `oracle` 側で上書きできるようにしている。
+    """
+    oracle = entry["oracle"]
+    return (oracle.get("verdictCommand", config["verdictCommand"]),
+            oracle.get("verdictPattern", config["verdictPattern"]))
+
+
 def collect_verdicts(sketch_dir: pathlib.Path, command: str, pattern: str) -> tuple[dict[str, str], str]:
     """判定コマンドを走らせ、{検査 ID: PASS/FAIL} と生ログを返す。"""
     print(f"==> 判定: {command}")
@@ -124,9 +154,11 @@ def main() -> None:
 
         build = run(["swift", "build"], sketch_dir)
         if build.returncode != 0:
-            # 破壊的変更はここで出る。上流が壊したのか作品が古いのかを人が見る材料になる
+            # 破壊的変更はここで出る。上流が壊したのか作品が古いのかを人が見る材料になる。
+            # **stdout と stderr の両方**から拾うこと — SwiftPM は診断を stdout へ出すことが
+            # あり、stderr だけを見ると「通らない」としか出ず原因が分からない。
             print("==> ビルドが通らない（破壊的変更の可能性）\n")
-            print(build.stderr.strip()[-3000:])
+            print("\n".join(build_errors(build)) or "（error 行を拾えなかった。--log で生ログを見る）")
             return
 
         print("==> ビルドは通った")
@@ -140,7 +172,18 @@ def main() -> None:
                 print(f"    見方  : {entry['oracle']['how']}")
             return
 
-        verdicts, log = collect_verdicts(sketch_dir, config["verdictCommand"], config["verdictPattern"])
+        # 既定のコマンドは必ず 1 回走らせ、出し方を上書きしているエントリのぶんだけ足す。
+        sources = {(config["verdictCommand"], config["verdictPattern"])}
+        sources.update(verdict_source(entry, config) for entry in entries)
+
+        verdicts: dict[str, str] = {}
+        logs: list[str] = []
+        for command, pattern in sorted(sources):
+            got, one = collect_verdicts(sketch_dir, command, pattern)
+            verdicts.update(got)
+            logs.append(one)
+        log = "\n".join(logs)
+
         if args.log:
             print("\n--- 生ログ ---\n" + log + "\n--------------\n")
         if not verdicts:
@@ -168,6 +211,11 @@ def main() -> None:
                     change = "変化なし"
                 elif before == "FAIL" and now == "PASS":
                     change = "★ 直った"
+                elif now == "LOOK" or before == "LOOK":
+                    # LOOK は「自動判定に落とせないので目視へ回す」区分。
+                    # PASS/FAIL との行き来を退行と呼ぶと、直っていないのに直ったように、
+                    # あるいはその逆に読める。判定区分が変わったことだけを伝える。
+                    change = f"判定区分が変わった（{before} → {now}・目視で見る）"
                 else:
                     change = "!! 退行"
                 print(f"{label:>16}  {check_id:<28} {before:<8} {str(now):<8} {change}")
