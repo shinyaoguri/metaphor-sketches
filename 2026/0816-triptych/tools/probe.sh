@@ -88,7 +88,7 @@ shots)
     sleep 1
     swift build >/dev/null
     TRIPTYCH_SHOTS=1 run_until_done 4
-    echo "→ ~/Desktop/triptych-center.png / triptych-wing-0.png / triptych-wing-1.png"
+    echo "→ output/triptych-center.png / triptych-wing-0.png / triptych-wing-1.png"
     ;;
 
 frames)
@@ -110,6 +110,7 @@ trap)
     stop
     sleep 1
     swift build >/dev/null
+    mkdir -p "$out_dir"
     # 落ちるかどうかを見るので、終了コードもそのまま見せる。
     # 落ちない trap（scalezero）は走り続けるので 10 秒で打ち切る。
     set +e

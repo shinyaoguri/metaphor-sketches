@@ -1354,10 +1354,10 @@
         "note": "0816-probe-windowclose の PROBE_MODE=reopen / openclose / burst / cycle が 3/3 で exit 139。isReleasedWhenClosed=false を外から立てた *-fixed は 3/3 で exit 0"
       },
       "recheck": {
-        "at": "2026-08-17",
-        "against": "main (d4faf3e)",
+        "at": "2026-08-24",
+        "against": "v0.10.0 (ef2ea34)",
         "verdict": "PASS",
-        "note": "2026/0816-probe-windowclose の PROBE_MODE=reopen / openclose / burst / cycle がいずれも exit 0 で完走（報告時は exit 139 の SIGSEGV）。triptych 側も TRIPTYCH_NOWORKAROUND=1 で t=42s の開き直しを越えて 55 秒生存したので、当て木 WindowCrashWorkaround を外せる"
+        "note": "作品の pin を 0.10.0 へ上げ、当て木 WindowCrashWorkaround を外した状態で確認。tools/probe.sh check の破壊的検査 (W5 / L1 / L2 / L3a / L3b / L5) がすべて PASS で完走し、trace 60 が t=42.0s の開き直しを越えて 60 秒走り切った (NSWindow=3 のまま増えない)。2026-08-17 は main (d4faf3e) での実測だったので、リリース版での実測に置き換えた"
       }
     },
     {
@@ -1376,10 +1376,10 @@
         "note": "翼を開き直すと ctx.time が 0 から始まり、共有時計との差が Δ=-42009.7ms になる (42 秒ぶんの巻き戻り)"
       },
       "recheck": {
-        "at": "2026-08-17",
-        "against": "main (d4faf3e)",
+        "at": "2026-08-24",
+        "against": "v0.10.0 (ef2ea34)",
         "verdict": "PASS",
-        "note": "tools/probe.sh trace 60 で、t=42.25s の開き直し直後の翼が own=42.24s / Δ=8.2ms（報告時は own が 0 から始まり Δ=-42009.7ms）。共有時計に対する巻き戻りが消えた。frames のカウンタは 13 から数え直すが、時刻は継続している"
+        "note": "tools/probe.sh trace 60 で、t=42.22s の開き直し直後の右翼が own=42.22s / Δ=7.9ms、左翼が own=42.19s / Δ=16.5ms（報告時は own が 0 から始まり Δ=-42009.7ms）。2026-08-17 の main での実測をリリース版で追認した"
       }
     },
     {
@@ -1401,10 +1401,10 @@
         "note": "同じ config で 3 回開き直した位置が (1016,571) → (1046,541) → (1076,511)、1 回あたり (30,-30)px"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-24",
+        "against": "v0.10.0 (ef2ea34)",
+        "verdict": "FAIL（半分だけ解消）",
+        "note": "oracle の 2 件で判定が割れた。L5 は PASS へ転じた（同じ config で 3 回開き直した位置が (836,751) → (836,751) → (836,751)、1 回あたり (0,0)。報告時は (30,-30)px ずつ流れていた）。W7 は FAIL のまま（SketchWindowConfig に位置指定が無く、実位置 中央=(580,553) 左翼=(700,553) 右翼=(730,523)）。カスケードのドリフトは直ったが位置指定 API は無いまま。上流 #837 は OPEN"
       }
     },
     {
@@ -1423,10 +1423,10 @@
         "note": "trap zero / negative / huge がいずれも Metal のアサーションで exit 134。windowScale:0 は 0×0 のウィンドウが isOpen=true で開く"
       },
       "recheck": {
-        "at": "2026-08-17",
-        "against": "main (d4faf3e)",
+        "at": "2026-08-24",
+        "against": "v0.10.0 (ef2ea34)",
         "verdict": "PASS",
-        "note": "tools/probe.sh trap zero / negative / huge / scalezero のいずれも abort せず「[W8] trap=… → nil を返した」（報告時は Metal のアサーションで exit 134、windowScale:0 は 0×0 のウィンドウが isOpen=true で開いていた）"
+        "note": "tools/probe.sh trap zero / negative / huge / scalezero のいずれも abort せず「[W8] trap=… → nil を返した」。windowScale:0 も nil を返す（報告時は Metal のアサーションで exit 134、scalezero は 0×0 のウィンドウが isOpen=true で開いていた）。2026-08-17 の main での実測をリリース版で追認した"
       }
     },
     {

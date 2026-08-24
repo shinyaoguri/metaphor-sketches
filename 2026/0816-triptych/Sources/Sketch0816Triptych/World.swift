@@ -92,7 +92,7 @@ enum World {
         if sunX > -260 && sunX < pw + 260 {
             for ring in stride(from: 5, through: 1, by: -1) {
                 let k = Float(ring)
-                ctx.fill(Color(r: 1.0, g: 0.82, b: 0.52, a: 0.055 * (6 - k)))
+                ctx.fill(Color(r: 1.0, g: 0.82, b: 0.52, alpha: 0.055 * (6 - k)))
                 ctx.circle(sunX, sunY, 92 + k * 42)
             }
             ctx.fill(Color(r: 1.0, g: 0.93, b: 0.76))
@@ -129,7 +129,7 @@ enum World {
             guard lx > -160 && lx < pw + 160 else { continue }
             for ring in stride(from: 4, through: 1, by: -1) {
                 let k = Float(ring)
-                ctx.fill(Color(r: 1.0, g: 0.78, b: 0.42, a: 0.05 * (5 - k)))
+                ctx.fill(Color(r: 1.0, g: 0.78, b: 0.42, alpha: 0.05 * (5 - k)))
                 ctx.circle(lx, lantern.y, 30 + k * 34)
             }
             ctx.fill(gold)
@@ -153,10 +153,10 @@ enum World {
             guard candidate > -90 && candidate < pw + 90 else { continue }
             for k in stride(from: 3, through: 1, by: -1) {
                 let f = Float(k)
-                ctx.fill(Color(r: 0.75, g: 0.88, b: 1.0, a: 0.05 * (4 - f)))
+                ctx.fill(Color(r: 0.75, g: 0.88, b: 1.0, alpha: 0.05 * (4 - f)))
                 ctx.rect(candidate - f * 22, 0, f * 44, height)
             }
-            ctx.fill(Color(r: 0.92, g: 0.97, b: 1.0, a: 0.55))
+            ctx.fill(Color(r: 0.92, g: 0.97, b: 1.0, alpha: 0.55))
             ctx.rect(candidate - 1.5, 0, 3, height)
         }
 
@@ -200,7 +200,7 @@ enum World {
 
         // 灯に照らされた足元の影
         if glow > 0.02 {
-            ctx.fill(Color(r: 1.0, g: 0.78, b: 0.45, a: glow * 0.22))
+            ctx.fill(Color(r: 1.0, g: 0.78, b: 0.45, alpha: glow * 0.22))
             ctx.circle(x, y + bob + 3, 46 * s)
         }
     }
@@ -211,7 +211,7 @@ enum World {
         let ox = panel.origin
         let y = height - 26
         ctx.noStroke()
-        ctx.fill(Color(r: 0, g: 0, b: 0, a: 0.45))
+        ctx.fill(Color(r: 0, g: 0, b: 0, alpha: 0.45))
         ctx.rect(0, y - 12, panel.width, 38)
 
         ctx.textSize(10)
@@ -239,7 +239,7 @@ enum World {
         ctx.rect(1.5, 1.5, panel.width - 3, height - 3)
         ctx.noStroke()
 
-        ctx.fill(Color(r: 0, g: 0, b: 0, a: 0.5))
+        ctx.fill(Color(r: 0, g: 0, b: 0, alpha: 0.5))
         ctx.rect(14, 14, 236, 46)
         ctx.fill(gold)
         ctx.textSize(15)

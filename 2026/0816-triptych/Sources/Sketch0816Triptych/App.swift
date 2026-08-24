@@ -141,13 +141,12 @@ final class Sketch0816Triptych: Sketch {
 
     /// この作品でセカンダリウィンドウを作る唯一の口。
     ///
-    /// `createWindow` の直後に当て木を当てる（`WindowCrashWorkaround`）。当て木なしだと
-    /// 翼を閉じてから開き直した瞬間にプロセスが落ちるので、開閉が構成そのものである
-    /// この作品は成立しない。
+    /// metaphor 0.9.0 では、ここで `NSWindow.isReleasedWhenClosed` を落とす当て木を当てないと、翼を
+    /// 閉じてから開き直した瞬間にプロセスが落ちた
+    /// （[metaphor#835](https://github.com/shinyaoguri/metaphor/issues/835)、0.10.0 で修正）。
+    /// 当て木は要らなくなったが、検査もこの口を通すので生成は 1 か所に集めたままにしてある。
     private func makeWindow(_ config: SketchWindowConfig) -> SketchWindow? {
-        let w = createWindow(config)
-        if w != nil { WindowCrashWorkaround.applyToAllWindows() }
-        return w
+        createWindow(config)
     }
 
     private func openWings() {
@@ -215,13 +214,14 @@ final class Sketch0816Triptych: Sketch {
 
         if shots && !didShots && since > shotsAt {
             didShots = true
-            // saveFrame(_:) は渡した名前に無条件で ~/Desktop/ を前置する（metaphor#757）。
-            // 絶対パスを渡すと無言で捨てられるので、ファイル名だけ渡す。
-            saveFrame("triptych-center.png")
+            // 0.10.0 で saveFrame(_:) の相対パスは <project>/ 起点になった（metaphor#757。
+            // 0.9.0 は渡した名前に無条件で ~/Desktop/ を前置し、絶対パスは無言で捨てていた）。
+            // output/ は gitignore 済みなので、そこへ名前をつけて置く。
+            saveFrame("output/triptych-center.png")
             for (i, wing) in wings.enumerated() {
-                wing.window?.context.saveFrame("triptych-wing-\(i).png")
+                wing.window?.context.saveFrame("output/triptych-wing-\(i).png")
             }
-            Log.line("[S6] ~/Desktop/triptych-center.png と triptych-wing-*.png を書き出した"
+            Log.line("[S6] output/triptych-center.png と output/triptych-wing-*.png を書き出した"
                      + "（翼のファイルが翼の絵になっていれば PASS）")
         }
 

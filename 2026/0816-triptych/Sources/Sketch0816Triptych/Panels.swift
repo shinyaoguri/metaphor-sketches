@@ -2,34 +2,6 @@ import AppKit
 import Foundation
 import metaphor
 
-/// **セカンダリウィンドウを閉じるとプロセスが落ちる**ことへの当て木。
-///
-/// `SketchWindow.setupWindow()` が `NSWindow.isReleasedWhenClosed` を既定の `true` のまま
-/// 使っているため、ARC 下では `close()` のときに AppKit の release と Swift の解放が重なり、
-/// 二重解放になる。その場では落ちず、**次に AppKit がウィンドウのトランザクションを畳むとき**
-/// （＝別のウィンドウを開くとき）に `EXC_BAD_ACCESS` で落ちる。
-///
-/// この作品は「翼が開いて閉じてまた開く」のが構成そのものなので、当て木なしでは成立しない。
-/// 切り分けと再現率は [0816-probe-windowclose](../0816-probe-windowclose/) にある。
-/// **`TRIPTYCH_NOWORKAROUND=1` で当て木を外せば、この作品でそのまま落ちるのを再現できる。**
-@MainActor
-enum WindowCrashWorkaround {
-    static let disabled = ProcessInfo.processInfo.environment["TRIPTYCH_NOWORKAROUND"] == "1"
-
-    /// metaphor は `SketchWindow` の `NSWindow` を公開しないので、AppKit 側から立てる。
-    ///
-    /// **タイトルで 1 枚だけ引くと足りない。** 閉じたウィンドウはしばらく
-    /// `NSApp.windows` に残るので（実測: 閉じてから 10 秒以上）、同じタイトルで開き直すと
-    /// 古いほうに当たってしまい、新しい翼が素のままになる。実際それで
-    /// 2 巡目の開き直し（t=84s）に落ちた。開いているものも閉じたものもまとめて倒す。
-    static func applyToAllWindows() {
-        guard !disabled else { return }
-        for w in NSApplication.shared.windows {
-            w.isReleasedWhenClosed = false
-        }
-    }
-}
-
 /// 三連祭壇画を実際に「並べる」ための当て木。
 ///
 /// `SketchWindowConfig` にはウィンドウの位置を指定する口が無く、既定は 30px のカスケードだけ

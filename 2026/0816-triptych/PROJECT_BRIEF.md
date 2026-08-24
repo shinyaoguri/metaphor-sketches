@@ -44,6 +44,9 @@
 
 ## 注意
 
-`TRIPTYCH_NOWORKAROUND=1` を付けると、翼を開き直した瞬間にプロセスが落ちる
-（[metaphor#835](https://github.com/shinyaoguri/metaphor/issues/835)）。
-既定では当て木が入っているので落ちない。詳細は README の「当て木」節。
+metaphor 0.9.0 では、翼を閉じてから開き直した瞬間にプロセスが落ちた
+（[metaphor#835](https://github.com/shinyaoguri/metaphor/issues/835)）。開閉が構成そのもの
+なので作品が成立せず、`WindowCrashWorkaround` という当て木を入れて出荷していた。
+
+**0.10.0 で直ったので、当て木は外してある**（`TRIPTYCH_NOWORKAROUND` の口も無くなった）。
+経緯と実測は README の "The workaround" 節。

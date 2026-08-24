@@ -33,7 +33,7 @@ swift run
 ```bash
 tools/probe.sh check     # full self-check, prints the verdict table
 tools/probe.sh trace 60  # clock skew, per-window fps, window positions, every 2s
-tools/probe.sh own 40    # let each wing use its OWN clock — watch the seam break
+tools/probe.sh own 50    # let each wing use its OWN clock (this broke the seam on 0.9.0)
 tools/probe.sh frames    # numbered PNGs from all three panels, for a GIF
 tools/probe.sh soak 180  # unattended, RSS and CPU every 10s
 ```
@@ -48,48 +48,64 @@ mode does not fail it spuriously.
 
 ## What it measured
 
-metaphor 0.9.0, macOS 15, Apple Silicon. `[ID]` matches the verdict lines the sketch prints.
+metaphor 0.10.0, macOS 15, Apple Silicon. `[ID]` matches the verdict lines the sketch prints.
+The sketch was first measured on 0.9.0 and re-measured when the pin moved to 0.10.0; rows marked
+*was FAIL on 0.9.0* are the ones that changed.
 
 | | Result |
 |---|---|
 | `W1`–`W4` | `createWindow` / config round-trip / `context` dimensions / per-window isolation — all PASS |
 | `W3` | `context.width/height` is the **offscreen texture** size (800×720), not the window size (400×360) |
-| `S2` | wings at 30 and 60 fps: frame count ratio 360/719 = **0.501** (expected 0.500) |
+| `S2` | wings at 30 and 60 fps: frame count ratio 359/719 = **0.499** (expected 0.500) |
 | `S5` | not measurable here — a synthesised `NSEvent` reaches neither a wing nor the centre, so the check reports N/A rather than a false failure |
-| `S1` | clocks of windows created together stay within **10–17 ms** over 12 s — under one frame of the shared clock's update granularity |
+| `S1` | clocks of windows created together stay within **4–16 ms** over 12 s — under one frame of the shared clock's update granularity |
 | `S4` | a click at the centre of a `windowScale: 0.5` wing maps to texture (400.0, 360.0), error **0.00 px** |
 | `L1`–`L3` | `close()` is idempotent, `closeAllWindows()` closes everything, and creating again afterwards works |
 | `L2` | on a closed window `draw(_:)` drops the closure and `onDraw(_:)` keeps it — the asymmetry the docs describe |
-| `L5` | **FAIL** — reopening with the same config walks the window (30, −30) px each time |
+| `L5` | **PASS** *(was FAIL on 0.9.0)* — three reopens with the same config all land on (836, 751); the window no longer walks (30, −30) px each time |
 | `W7` | **FAIL** — the wings cannot be placed left and right; there is no position API |
 | `W6` | not observable — the `.timer(fps:)` promotion for `syphonName` never reaches `window.config` |
-| `W8` | **FAIL** — a 0, negative or 65536-wide config aborts inside Metal instead of returning `nil`; `windowScale: 0` opens a live 0×0 window |
-| soak | 1800 s / 179 samples, RSS 88.6 MB → 88.7 MB across 42 open-close cycles — flat |
+| `W8` | **PASS** *(was FAIL on 0.9.0)* — a 0, negative or 65536-wide config returns `nil`, and so does `windowScale: 0`, instead of aborting inside Metal |
+| soak | **without the workaround**, 1800 s / 180 samples across 43 open-close cycles: RSS 87.8 MB → 89.7 MB overall; past the 120 s warm-up it is 88.8 → 89.7 MB, and the last 600 s (14 cycles) sits flat at 89.7 MB. `NSWindow` stays at 3 throughout |
 
-Four of these went upstream:
+Four of these went upstream. Three are fixed as of v0.10.0:
 
 - [metaphor#835](https://github.com/shinyaoguri/metaphor/issues/835) — closing a secondary
-  window and then opening another one **crashes the process** (`isReleasedWhenClosed`)
+  window and then opening another one **crashed the process** (`isReleasedWhenClosed`).
+  **Fixed in v0.10.0**, which is what let the workaround below go
 - [metaphor#836](https://github.com/shinyaoguri/metaphor/issues/836) — a re-created wing's
-  `context.time` restarts at 0, contradicting the documented "time since the sketch started"
-- [metaphor#837](https://github.com/shinyaoguri/metaphor/issues/837) — no window position
-  API, and the cascade counter never decreases
+  `context.time` restarted at 0, contradicting the documented "time since the sketch started".
+  **Fixed in v0.10.0**: after the t = 42 s reopen a wing reports `own = 42.22 s`, `Δ = 7.9 ms`,
+  where it used to come back with `Δ = −42009.7 ms`
 - [metaphor#842](https://github.com/shinyaoguri/metaphor/issues/842) — a degenerate
-  `SketchWindowConfig` aborts on a Metal assertion instead of returning `nil`
+  `SketchWindowConfig` aborted on a Metal assertion instead of returning `nil`.
+  **Fixed in v0.10.0** — all four traps (`zero` / `negative` / `huge` / `scalezero`) return
+  `nil` and the process keeps running
+- [metaphor#837](https://github.com/shinyaoguri/metaphor/issues/837) — no window position
+  API, and the cascade counter never decreases. **Still open, but half of it moved on
+  v0.10.0**: the cascade no longer drifts (`L5` passes and the wings hold their place across a
+  reopen), while the position API is still missing (`W7` still fails, and `AltarArrangement`
+  still has to place the three windows through AppKit)
 
-## The workaround
+## The workaround, and why it is gone
 
-**Without it this sketch cannot exist.** Closing a wing and opening it again 12 seconds
-later kills the process 3 times out of 3 (metaphor#835). So `makeWindow(_:)` clears
-`isReleasedWhenClosed` on every `NSWindow` right after `createWindow` returns.
+**On 0.9.0 this sketch could not exist without one.** Closing a wing and opening it again 12
+seconds later killed the process 3 times out of 3 (metaphor#835), so `makeWindow(_:)` cleared
+`isReleasedWhenClosed` on every `NSWindow` right after `createWindow` returned.
 
-Clearing it on the one window matching the title is **not enough**: a closed window stays
-in `NSApp.windows` for over ten seconds, so reopening with the same title hits the stale
-one and the new wing stays unpatched — which is exactly how the second cycle (t = 84 s)
+Clearing it on the one window matching the title was **not enough**: a closed window stayed
+in `NSApp.windows` for over ten seconds, so reopening with the same title hit the stale
+one and the new wing stayed unpatched — which is exactly how the second cycle (t = 84 s)
 died before the workaround was widened.
 
-Set `TRIPTYCH_NOWORKAROUND=1` to drop the workaround and watch it crash at t = 42 s.
-The minimal repro lives in [`0816-probe-windowclose`](../0816-probe-windowclose/).
+**v0.10.0 fixes the double free, so the workaround and its `TRIPTYCH_NOWORKAROUND` escape hatch
+are both gone.** `makeWindow(_:)` is a plain `createWindow(config)` now. What replaced the
+workaround is the measurement: on 0.10.0 the destructive checks (`W5`, `L1`–`L5`) run to
+completion, a 60 s trace crosses the t = 42 s reopen with the wings holding their position and
+`NSWindow` staying at 3, and the soak above runs four open-close cycles without it.
+
+The minimal repro still lives in [`0816-probe-windowclose`](../0816-probe-windowclose/), which
+is still pinned to 0.9.0 — the version where the crash reproduces exactly as reported.
 
 ## Notes for reading the code
 
@@ -97,11 +113,18 @@ The minimal repro lives in [`0816-probe-windowclose`](../0816-probe-windowclose/
   the **same function** for all three panels — the centre passes `Sketch.context`, the wings
   pass `SketchWindow.context`.
 - **The wings draw with the primary's clock, not their own.** `Stage.clock` is written by
-  the centre every frame and read by the wings from their own render loops. Using each
-  wing's `ctx.time` instead (`tools/probe.sh own`) breaks the seam by 42 seconds the moment
-  a wing is recreated — see metaphor#836.
+  the centre every frame and read by the wings from their own render loops. On 0.9.0, letting
+  each wing use its `ctx.time` instead (`tools/probe.sh own`) broke the seam by 42 seconds the
+  moment a wing was recreated (metaphor#836). **v0.10.0 fixed that**: on 0.10.0 `own` stays in
+  step — after the t = 42 s reopen the wings report `own = 42.31 s` and `42.32 s` against a
+  centre at `42.32 s`. The shared clock is kept anyway, because it makes the seam independent
+  of how each window's render loop happens to be driven.
 - The destructive checks (`W5`, `L1`–`L5`) run **one step per frame**, not in `setup()`.
-  Opening and closing windows in a single runloop turn is one of the shapes that crashes.
+  Opening and closing windows in a single runloop turn was one of the shapes that crashed on
+  0.9.0. Whether 0.10.0 also fixed *that* shape has not been re-measured — the checks were
+  left frame-driven rather than moved back into `setup()` to find out.
 - Colours are `Color` (0…1) throughout, never `fill(0–255)`, so there is no scale to mix up.
-- `saveFrame(_:)` prefixes `~/Desktop/` unconditionally, so the shots pass a bare filename
-  ([metaphor#757](https://github.com/shinyaoguri/metaphor/issues/757)).
+- `saveFrame(_:)` resolves a relative path against the **project directory** since 0.10.0
+  ([metaphor#757](https://github.com/shinyaoguri/metaphor/issues/757)), so the shots are written
+  to `output/`, which is gitignored. On 0.9.0 it prefixed `~/Desktop/` unconditionally and
+  silently dropped absolute paths.
