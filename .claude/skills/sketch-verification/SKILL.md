@@ -27,13 +27,22 @@ gh issue create --title "2026/<MMDD>-<名前> の検証記録" --label verificat
 **「この作品で検証できる metaphor の API・機能」の表を、結果列を空にして先に埋める。**
 このとき **`api-coverage.py` の出力（着手前の状態）も一緒に貼る**。
 なぜその領域を選んだのかが後から辿れるし、完了後の出力と並べれば差分が見える。
+**ヘッダ（読んだ `llms.txt` の一覧）ごと貼ること** — 母数は metaphor の版と
+プラグインの解決状況で動くので、それが無いと着手前 / 完了後を並べても比べられない。
 
 ## 1. 何を作るか決める
 
 ```bash
-.claude/skills/sketch-verification/scripts/api-coverage.py            # 未使用をモジュール別に要約
-.claude/skills/sketch-verification/scripts/api-coverage.py --list MPS # そのモジュールの未使用を全件
+.claude/skills/sketch-verification/scripts/api-coverage.py             # 未使用をモジュール別に要約
+.claude/skills/sketch-verification/scripts/api-coverage.py --list MPS  # そのモジュールの API を全件（使用済みは [済]）
+.claude/skills/sketch-verification/scripts/api-coverage.py --self-test # 抽出器の自己テスト（llms.txt 不要）
 ```
+
+読む `llms.txt` は **metaphor 本体だけでなくプラグインパッケージ（metaphor-syphon など）も**含む。
+パッケージごとに最新の解決結果を採るので、metaphor は A の作品から、プラグインは B の作品から、
+という混成になりうる。どれを読んだかは出力の先頭に出る。
+プラグインの API が出ないときは、そのパッケージを使う作品で `swift package resolve` が済んでいるかを見る
+（[#24](https://github.com/shinyaoguri/metaphor-sketches/issues/24)）。
 
 **この出力は「未使用リスト」であって「やることリスト」ではない。**
 名前の一致で数えているだけなので、
@@ -238,7 +247,7 @@ issue には**走らせた秒数とサンプル数を必ず書く**（「ソー�
 
 1. issue へ **API ごとに**結果を追記する（表の結果列を埋める）。動作確認の詳細はこの issue が一次記録
 2. **`api-coverage.py` の完了後の出力も貼る。** 着手前と並べれば、この作品で何がどれだけ増えたかと、
-   **次に残っている領域**が同じ場所に残る
+   **次に残っている領域**が同じ場所に残る。着手前と同じくヘッダごと貼る
 3. 見つけた問題を metaphor / metaphor-cli へ起票し、issue から番号でリンクする。
    **起票したらその場で `verification/upstream.json` へ追加する。**
    判定手段は可能なかぎり自己検査 ID にしておく（後で機械的に再検証できる）。
