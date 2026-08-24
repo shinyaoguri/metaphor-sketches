@@ -11,7 +11,7 @@ let package = Package(
         // metaphor への依存。リリース参照の from: "X.Y.Z" は「X.Y.Z 以上・次の major 未満」を
         // 許容する（0.x では minor 更新にも破壊的変更が入りうる）。バージョンを固定したい
         // 場合は .upToNextMinor(from:) や exact: に書き換える。
-        .package(url: "https://github.com/shinyaoguri/metaphor.git", from: "0.9.0")
+        .package(url: "https://github.com/shinyaoguri/metaphor.git", from: "0.14.0")
     ],
     targets: [
         .executableTarget(

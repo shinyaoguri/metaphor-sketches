@@ -47,18 +47,18 @@ enum Stage {
     // MARK: - 色
 
     enum Ink {
-        static let house = Color(r: 0.055, g: 0.047, b: 0.043, a: 1)      // 客席の闇
-        static let skyTop = Color(r: 0.86, g: 0.58, b: 0.24, a: 1)        // 背景幕の上
-        static let skyBottom = Color(r: 0.42, g: 0.17, b: 0.13, a: 1)     // 背景幕の下
-        static let silhouette = Color(r: 0.05, g: 0.035, b: 0.035, a: 1)  // 影絵
-        static let curtain = Color(r: 0.36, g: 0.07, b: 0.10, a: 1)
-        static let curtainDark = Color(r: 0.22, g: 0.04, b: 0.06, a: 1)
-        static let brass = Color(r: 0.52, g: 0.40, b: 0.22, a: 1)
-        static let paper = Color(r: 0.11, g: 0.10, b: 0.09, a: 1)
-        static let ink = Color(r: 0.91, g: 0.86, b: 0.76, a: 1)
-        static let inkDim = Color(r: 0.50, g: 0.46, b: 0.40, a: 1)
-        static let alarm = Color(r: 0.86, g: 0.30, b: 0.24, a: 1)
-        static let good = Color(r: 0.47, g: 0.72, b: 0.47, a: 1)
+        static let house = Color(r: 0.055, g: 0.047, b: 0.043, alpha: 1)      // 客席の闇
+        static let skyTop = Color(r: 0.86, g: 0.58, b: 0.24, alpha: 1)        // 背景幕の上
+        static let skyBottom = Color(r: 0.42, g: 0.17, b: 0.13, alpha: 1)     // 背景幕の下
+        static let silhouette = Color(r: 0.05, g: 0.035, b: 0.035, alpha: 1)  // 影絵
+        static let curtain = Color(r: 0.36, g: 0.07, b: 0.10, alpha: 1)
+        static let curtainDark = Color(r: 0.22, g: 0.04, b: 0.06, alpha: 1)
+        static let brass = Color(r: 0.52, g: 0.40, b: 0.22, alpha: 1)
+        static let paper = Color(r: 0.11, g: 0.10, b: 0.09, alpha: 1)
+        static let ink = Color(r: 0.91, g: 0.86, b: 0.76, alpha: 1)
+        static let inkDim = Color(r: 0.50, g: 0.46, b: 0.40, alpha: 1)
+        static let alarm = Color(r: 0.86, g: 0.30, b: 0.24, alpha: 1)
+        static let good = Color(r: 0.47, g: 0.72, b: 0.47, alpha: 1)
     }
 
     // MARK: - 舞台
@@ -67,7 +67,7 @@ enum Stage {
         s.background(Ink.house)
         // 客席側の床板。舞台の下端から手前へ、わずかに明るく
         s.noStroke()
-        s.fill(Color(r: 0.09, g: 0.075, b: 0.068, a: 1))
+        s.fill(Color(r: 0.09, g: 0.075, b: 0.068, alpha: 1))
         s.rect(0, 462, s.width, 22)
     }
 
@@ -80,7 +80,7 @@ enum Stage {
         s.linearGradient(f.x, f.y, f.w, f.h, Ink.skyTop, Ink.skyBottom, axis: .vertical)
 
         // 遠景の丘。影絵の奥行きを作るためだけの飾り
-        s.fill(Color(r: 0.30, g: 0.12, b: 0.11, a: 1))
+        s.fill(Color(r: 0.30, g: 0.12, b: 0.11, alpha: 1))
         s.beginShape()
         s.vertex(f.x, f.floor)
         s.vertex(f.x, f.floor - 52)
@@ -94,7 +94,7 @@ enum Stage {
         s.endShape(.close)
 
         // 舞台床
-        s.fill(Color(r: 0.13, g: 0.07, b: 0.06, a: 1))
+        s.fill(Color(r: 0.13, g: 0.07, b: 0.06, alpha: 1))
         s.rect(f.x, f.floor - 18, f.w, 18)
 
         // 役者（影絵）
@@ -134,7 +134,7 @@ enum Stage {
         }
         // 幕の合わせ目に落ちる影
         if shut > 0.02 {
-            s.fill(Color(r: 0, g: 0, b: 0, a: 0.35))
+            s.fill(Color(r: 0, g: 0, b: 0, alpha: 0.35))
             s.rect(f.x + panelW - 6, f.y, 6, f.h)
             s.rect(f.right - panelW, f.y, 6, f.h)
         }
@@ -252,14 +252,14 @@ enum Stage {
         switch state.trimmingCharacters(in: .whitespaces) {
         case "DONE": s.fill(Ink.good)
         case "RUN": s.fill(Ink.ink)
-        default: s.fill(Color(r: 0.34, g: 0.31, b: 0.28, a: 1))
+        default: s.fill(Color(r: 0.34, g: 0.31, b: 0.28, alpha: 1))
         }
         s.text(state, x + 106, y)
 
         // 値のバー
         let bx = x + 156
         let bw = w - 172
-        s.fill(Color(r: 0.18, g: 0.16, b: 0.15, a: 1))
+        s.fill(Color(r: 0.18, g: 0.16, b: 0.15, alpha: 1))
         s.rect(bx, y - 9, bw, 10, 2)
         let filled = max(0, min(1, value)) * bw
         if filled > 0.5 {
