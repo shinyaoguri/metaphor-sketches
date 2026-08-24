@@ -199,11 +199,15 @@ struct Optics {
     /// `ortho()` を引数なしで呼んだときの範囲（`Canvas3D+Camera.swift` の既定）。
     ///
     /// **left/right/bottom/top はワールド座標ではなくビュー空間の範囲として使われる。**
-    /// 既定カメラのビュー空間は原点が画面中心なので、`[0, width] × [height, 0]` を
-    /// 当てると被写体が左上へ寄る（metaphor#777 はこれ）。
+    /// 報告時（metaphor#777）の既定は `[0, width] × [height, 0]` で、ビュー空間の原点が
+    /// 画面中心である既定カメラと噛み合わず、被写体が左上へ寄っていた。
+    /// v0.10.0 で **原点を挟む対称範囲**へ直り、既定カメラと噛み合うようになった。
+    /// near/far も固定の ±1000 から既定カメラ基準（`±defaultZ × 10`）に変わっている。
     func withDefaultOrtho() -> Optics {
         var o = self
-        o.ortho = (left: 0, right: width, bottom: height, top: 0)
+        o.ortho = (left: -width / 2, right: width / 2, bottom: -height / 2, top: height / 2)
+        o.near = -defaultZ * 10
+        o.far = defaultZ * 10
         return o
     }
 

@@ -209,14 +209,26 @@ extension Sketch0816Atelier {
                 Finding("D2.orthoDefault", "ortho() 省略時に被写体が来る位置",
                         .look("画面中央（\(f0(axis.x)), \(f0(axis.y))）に置いた板 / "
                               + "解析上の中心=(\(f1(b.cx)), \(f1(b.cy))) / \(measured) / "
-                              + "省略時の範囲 [0, \(f0(width))]×[\(f0(height)), 0] は"
-                              + "**ワールドではなくビュー空間**に当たるため、中心が画面の隅へ寄る"
-                              + "（metaphor#777）")),
-                Finding("D2b.orthoDefaultOffCenter", "被写体が画面中心から離れる量",
-                        abs(b.cx - axis.x) > 100 || abs(b.cy - axis.y) > 100
-                            ? .fail("中心が (\(f1(b.cx - axis.x)), \(f1(b.cy - axis.y))) px ずれる"
-                                    + "（既定カメラと噛み合っていない）")
-                            : .pass("中心のずれ=(\(f1(b.cx - axis.x)), \(f1(b.cy - axis.y))) px")),
+                              + "省略時の範囲は原点を挟む対称範囲 "
+                              + "[-\(f0(width / 2)), \(f0(width / 2))]×[-\(f0(height / 2)), \(f0(height / 2))]。"
+                              + "**ワールドではなくビュー空間**に当たるが、既定カメラのビュー空間は"
+                              + "原点が画面中心なので噛み合う（metaphor#777 は旧既定 "
+                              + "[0, \(f0(width))]×[\(f0(height)), 0] が噛み合わず隅へ寄っていたもので、"
+                              + "v0.10.0 で解決）")),
+                // 測る先は **レンダリングの実測** であって、解析モデル `withDefaultOrtho()` ではない。
+                // 報告時（metaphor#777）はその解析モデルが旧既定の複製として正しかったが、
+                // いまは実測が画面中央に来る。解析モデルと比べ続けると
+                // 「ライブラリではなくこちらの複製」を測ることになるので、予測は参考値として残し、
+                // 合否は実測の中心が画面中央から離れていないかで決める。
+                Finding("D2b.orthoDefaultOffCenter", "被写体が画面中心から離れる量", {
+                    guard let s = sil else { return Verdict.fail("画面内に写らなかった（実測できない）") }
+                    let dx = s.cx - axis.x
+                    let dy = s.cy - axis.y
+                    let analytic = "解析モデルの予測=(\(f1(b.cx - axis.x)), \(f1(b.cy - axis.y))) px"
+                    return abs(dx) > 100 || abs(dy) > 100
+                        ? .fail("実測中心が画面中央から (\(f1(dx)), \(f1(dy))) px ずれる / \(analytic)")
+                        : .pass("実測中心のずれ=(\(f1(dx)), \(f1(dy))) px / \(analytic)")
+                }()),
             ]
 
         case 2:
@@ -287,13 +299,20 @@ extension Sketch0816Atelier {
                 Finding("D5b.screenZRange", "screenZ は 0…1 か",
                         inRange ? .pass("全点が 0…1 | " + samples.map { "\($0.label)=\(f3($0.value))" }.joined(separator: " "))
                                 : .fail("範囲外あり | " + samples.map { "\($0.label)=\(f3($0.value))" }.joined(separator: " "))),
-                Finding("D5c.screenZBehindCamera", "カメラ背後の点",
-                        (apiBehindZ >= 0 && apiBehindZ <= 1 && behind.w > 0)
-                            ? .pass("背後でも 0…1（w=\(f2(behind.w))）")
-                            : .fail("背後（w=\(f2(behind.w))）で screenZ=\(f3(apiBehindZ)) / "
-                                    + "screenX=\(f1(apiBehindX)) は画面中心の左（本来は右にあるはず）へ回る。"
-                                    + "`screenPosition` は clip.w の符号を見ないので、"
-                                    + "呼び出し側から「背後だから無効」と判別できない")),
+                // 上流は `screenPosition` の値を変えるのではなく **`isInFront(_:_:_:)` を足す**
+                // 形で解決した（metaphor#824 / PR #873）。背後の点で screenX/Y/Z が反転した値を
+                // 返すこと自体は変わらないので、「背後だから無効」は述語で判別する。
+                // 実測値は detail に残して、何が返ってくるかは今までどおり読めるようにする。
+                Finding("D5c.screenZBehindCamera", "カメラ背後の点を判別できるか", {
+                    let behindIsBehind = !isInFront(axis.x + 100, axis.y, behindZ)
+                    let frontIsFront = isInFront(axis.x, axis.y, 0)
+                    let measured = "背後の実測: w=\(f2(behind.w)) screenZ=\(f3(apiBehindZ)) "
+                        + "screenX=\(f1(apiBehindX))（画面中心の左へ回る値のまま）"
+                    return behindIsBehind && frontIsFront
+                        ? .pass("isInFront: 背後=false / 手前=true → \(measured)")
+                        : .fail("isInFront が判別しない（背後=\(!behindIsBehind) 手前=\(frontIsFront)）"
+                                + " → \(measured)")
+                }()),
             ]
 
         case 5:
