@@ -262,8 +262,10 @@ enum Instrument {
 
     /// A4: `band(0/1/2)` が実際にどの周波数で切れるか。
     ///
-    /// doc のコメントは「低音 0-250Hz / 中音 250-2kHz / 高音 2kHz+」。
-    /// 実装は halfFFTSize を 1/8, 1/2 で割っているだけなので、サンプリング周波数に比例する。
+    /// 報告時（0.9.0）の doc は「低音 0-250Hz / 中音 250-2kHz / 高音 2kHz+」だったが、
+    /// 実装は halfFFTSize を 1/8, 1/2 で割っているだけでサンプリング周波数に比例する。
+    /// metaphor#782 で doc が実装に合わせて書き直され、境界は `sampleRate/16` /
+    /// `sampleRate/4` / `sampleRate/2` と明記された。ここではその新しい約束を測る。
     static func bandBoundaries() -> Verdict {
         var lowestOf = [Int: Float]()
         var highestOf = [Int: Float]()
@@ -288,39 +290,67 @@ enum Instrument {
             return "band\(index)=\(Int(low))–\(Int(high))Hz"
         }.joined(separator: " ")
 
-        // doc どおりなら band0 の上端は 250Hz 近辺のはず。
-        let band0Top = highestOf[0] ?? 0
-        let ok = band0Top < 400
+        // doc が約束する境界。掃引は 1/6 オクターブ刻みなので、境界そのものは
+        // 「その手前の掃引点が下の帯、直後の掃引点が上の帯」でしか押さえられない。
+        let edge0 = Float(rate) / 16
+        let edge1 = Float(rate) / 4
+        let step = powf(2, 1.0 / 6.0)
+        func straddles(_ high: Float?, _ low: Float?, _ edge: Float) -> Bool {
+            guard let high, let low else { return false }
+            return high <= edge && low > edge && high * step >= edge && low / step <= edge
+        }
+        let ok = straddles(highestOf[0], lowestOf[1], edge0)
+            && straddles(highestOf[1], lowestOf[2], edge1)
         return Verdict(
             id: "A4.bandBoundaries",
             passed: ok,
             detail: "A4 実測の担当範囲: \(described)"
-                + "（doc は 0–250 / 250–2k / 2k+。band0 の上端 \(Int(band0Top))Hz）"
+                + "（doc の境界は sampleRate/16=\(Int(edge0))Hz と sampleRate/4=\(Int(edge1))Hz。"
+                + "掃引は 1/6 オクターブ刻みなので、境界を挟む 2 点が"
+                + "band0 上端 \(Int(highestOf[0] ?? 0))Hz → band1 下端 \(Int(lowestOf[1] ?? 0))Hz、"
+                + "band1 上端 \(Int(highestOf[1] ?? 0))Hz → band2 下端 \(Int(lowestOf[2] ?? 0))Hz）"
         )
     }
 
-    /// A5: `volume` が doc の言う「RMS」と一致するか。
+    /// A5: `volume` が doc の言うスケールと一致するか。
     ///
-    /// 振幅 A の正弦波の RMS は A/√2。実装は `min(rms * 4, 1)` なので、
-    /// A ≳ 0.354 で飽和して振幅の差が見えなくなる。
+    /// 報告時（0.9.0）の doc は「RMS」と書いていたが、実装は `min(rms * 4, 1)`。
+    /// metaphor#782 で doc が実装に合わせて書き直され、x4 のゲインと
+    /// 「A ≈ 0.354（= √2/4）から上は飽和して入力レベルが復元できない・
+    /// 飽和以下なら生の RMS は volume/4」が明記された。ここではその約束を測る。
     static func volumeScale() -> Verdict {
+        // 飽和が始まる振幅（rms = 0.25 → A = 0.25·√2）。
+        let saturation = 0.25 * sqrtf(2)
+
+        // 飽和以下: volume = rms·4 で、volume/4 から生の RMS が戻せる。
         let amplitude: Float = 0.2
         let analyzer = analyzer()
         let samples = Score.sine(frequency: 440, count: fftSize, amplitude: amplitude)
         feed(analyzer, samples)
-
         let rms = sqrtf(samples.reduce(0) { $0 + $1 * $1 } / Float(samples.count))
         let measured = analyzer.volume
         let ratio = rms > 0 ? measured / rms : 0
-        // 飽和が始まる振幅（rms = 0.25 → A = 0.25·√2）。
-        let saturation = 0.25 * sqrtf(2)
-        let ok = abs(measured - rms) < 1e-3
+        let belowOK = abs(measured - min(rms * 4, 1)) < 1e-3 && abs(measured / 4 - rms) < 1e-3
+
+        // 飽和より上: 1.0 に張り付き、振幅の差が値に出なくなる。
+        let loudA: Float = 0.5
+        let louderA: Float = 0.9
+        let loud = Self.analyzer()
+        feed(loud, Score.sine(frequency: 440, count: fftSize, amplitude: loudA))
+        let louder = Self.analyzer()
+        feed(louder, Score.sine(frequency: 440, count: fftSize, amplitude: louderA))
+        let aboveOK = abs(loud.volume - 1) < 1e-6 && abs(louder.volume - 1) < 1e-6
+
+        let below = "A5 A=\(f(amplitude, 2)) の正弦波: volume=\(f(measured, 4))"
+            + " RMS=\(f(rms, 4)) 比=\(f(ratio, 3)) 期待=4.000"
+        let recovered = " / volume/4=\(f(measured / 4, 4)) で RMS が戻る"
+        let above = " / A=\(f(loudA, 2))→\(f(loud.volume, 4))"
+            + " A=\(f(louderA, 2))→\(f(louder.volume, 4))"
+        let note = "（A≧\(f(saturation, 3)) で 1.0 に飽和し、入力レベルは復元できない）"
         return Verdict(
             id: "A5.volumeScale",
-            passed: ok,
-            detail: "A5 A=\(f(amplitude, 2)) の正弦波: volume=\(f(measured, 4))"
-                + " RMS=\(f(rms, 4)) 比=\(f(ratio, 3))"
-                + "（A≧\(f(saturation, 3)) で 1.0 に飽和する）"
+            passed: belowOK && aboveOK,
+            detail: below + recovered + above + note
         )
     }
 
