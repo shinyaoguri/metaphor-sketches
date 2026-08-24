@@ -97,8 +97,10 @@ enum Instrument {
 
         // T2b: delay 待ちの Tween は、外から見て「まだ出番が来ていない」のか
         //      「そもそも出番が無い」のか区別できるか。
-        //      公開されているのは isActive（= state == .running）と isComplete（= .complete）だけ。
-        //      .delaying はどちらも false を返すので、.idle と同じ見え方になる。
+        //      0.9.0 では公開が isActive（= state == .running）と isComplete（= .complete）だけで、
+        //      .delaying はどちらも false を返すので .idle と同じ見え方だった（metaphor#840 → #946）。
+        //      0.14.0 で isWaiting（= .delaying）が足されたので、doc が約束する
+        //      4 状態 × 3 プロパティの対応表どおりに全状態が一意に読めるかを見る。
         do {
             let waiting = Tween(from: Float(0), to: Float(100), duration: 1.0, easing: linear).delay(2.0)
             let mw = rig(waiting)
@@ -109,13 +111,31 @@ enum Instrument {
             let mn = rig(never)
             step(mn, dt64, 32)  // start() すらしていない
 
-            let waitingLooks = (waiting.isActive, waiting.isComplete)
-            let neverLooks = (never.isActive, never.isComplete)
-            let distinguishable = waitingLooks != neverLooks
-            v.append(Verdict(id: "T2b.delayingLooksIdle", passed: distinguishable,
-                             detail: "delay 待ち (isActive,isComplete)=\(waitingLooks) / 未 start=\(neverLooks)。"
-                                 + " 同じなら「袖で待っている」と「出番が無い」を外から区別できない"
-                                 + "（.delaying を示す公開プロパティが無い）"))
+            let running = Tween(from: Float(0), to: Float(100), duration: 1.0, easing: linear)
+            let mr = rig(running)
+            running.start()
+            step(mr, dt64, 32)  // 本編の途中
+
+            let done = Tween(from: Float(0), to: Float(100), duration: 0.25, easing: linear)
+            let md = rig(done)
+            done.start()
+            step(md, dt64, 32)  // 完了済み
+
+            func looks(_ t: Tween<Float>) -> String {
+                "(\(t.isWaiting), \(t.isActive), \(t.isComplete))"
+            }
+            let waitingLooks = (waiting.isWaiting, waiting.isActive, waiting.isComplete)
+            let neverLooks = (never.isWaiting, never.isActive, never.isComplete)
+            let runningLooks = (running.isWaiting, running.isActive, running.isComplete)
+            let doneLooks = (done.isWaiting, done.isActive, done.isComplete)
+            let ok = waitingLooks == (true, false, false) && neverLooks == (false, false, false)
+                && runningLooks == (false, true, false) && doneLooks == (false, false, true)
+            v.append(Verdict(id: "T2b.delayingLooksIdle", passed: ok,
+                             detail: "(isWaiting,isActive,isComplete) delay 待ち=\(looks(waiting))"
+                                 + " / 未 start=\(looks(never)) / 実行中=\(looks(running))"
+                                 + " / 完了=\(looks(done))。"
+                                 + " 期待=(true,false,false)/(false,false,false)/(false,true,false)/(false,false,true)"
+                                 + "（isWaiting が「袖で待っている」と「出番が無い」を分ける）"))
         }
 
         // T3: start() を呼ぶまでは、いくら刻んでも動かない。
@@ -605,8 +625,8 @@ enum Instrument {
         }
         do {
             // Color は 0…1 正規化。α も一緒に補間されるか。
-            let m = Color.interpolate(from: Color(r: 0, g: 0, b: 0, a: 0),
-                                      to: Color(r: 1, g: 0.5, b: 0.25, a: 1), t: 0.5)
+            let m = Color.interpolate(from: Color(r: 0, g: 0, b: 0, alpha: 0),
+                                      to: Color(r: 1, g: 0.5, b: 0.25, alpha: 1), t: 0.5)
             let ok = Approx.eq(m.r, 0.5) && Approx.eq(m.g, 0.25) && Approx.eq(m.b, 0.125) && Approx.eq(m.a, 0.5)
             v.append(Verdict(id: "I5.color", passed: ok,
                              detail: "t=0.5 → rgba(\(Approx.f(m.r)), \(Approx.f(m.g)), \(Approx.f(m.b)), \(Approx.f(m.a)))"
