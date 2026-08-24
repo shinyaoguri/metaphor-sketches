@@ -46,3 +46,15 @@ metaphor / metaphor-cli の機能・仕様の問題は各リポジトリへ Issu
 **上流へ報告するときも同じ規則で証跡（画像・GIF）を添える。**
 
 - [ ] 
+
+## Epic への含意
+
+**作品を通し終えたら埋める。** 個別の穴を起票するだけでは、上流の設計判断（どの機能を作るか / まだ作らないか）
+には届かない。この作品で得た所見が次のどれに効くかを書く。**効くものが無ければ「無し」と書く**（空欄で終えない）。
+
+- 構造化支援 [metaphor#415](https://github.com/shinyaoguri/metaphor/issues/415) — シーン遷移 / cue リスト / スケジューラの実需:
+- 現場運用 [metaphor#416](https://github.com/shinyaoguri/metaphor/issues/416) — マルチディスプレイ / キオスク / 自動復帰 / 自己監視の実需:
+- 検討 Issue（[#563](https://github.com/shinyaoguri/metaphor/issues/563) 決定論・入力リプレイ / [#564](https://github.com/shinyaoguri/metaphor/issues/564) 視覚検証 / [#567](https://github.com/shinyaoguri/metaphor/issues/567) パラメータ探索 / [#568](https://github.com/shinyaoguri/metaphor/issues/568) Render Trace / [#570](https://github.com/shinyaoguri/metaphor/issues/570) Take / [#571](https://github.com/shinyaoguri/metaphor/issues/571) Scene の寿命境界 / [#573](https://github.com/shinyaoguri/metaphor/issues/573) `.app` 配布 / [#608](https://github.com/shinyaoguri/metaphor/issues/608) ローカル作品理解）— 採否の判断材料:
+
+**反証も所見**。「この作品では要らなかった」は、機能を作らない根拠として同じだけ価値がある
+（例: `0815-strata` / `0816-marionette` はどちらも #571 の寿命境界を必要としなかった）。
