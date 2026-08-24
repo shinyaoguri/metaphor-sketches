@@ -284,10 +284,10 @@
         "note": "意味が逆"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": "2026-08-17 の巡回では未実施（目視が要る）。main でのビルドは通る"
+        "at": "2026-08-24",
+        "against": "main 04125fa5（ソース）",
+        "verdict": "PARTIAL（実装は解決 / 目視は未実施）",
+        "note": "MetaphorPostProcess.metal の metaphor_postVignette が strength = clamp(intensity,0,1) / outer = mix(1.25, 0.65, strength) となり、intensity を上げるほど暗い輪が中心へ寄る向きへ直っている。intensity=0 では outer=0.75 が隅の dist=0.707 を超えるのでどこも暗くならない。doc にも「0.0 で無効、1.0 で最も強い」と、旧 intensity r からの換算 (1.25-r)/0.6 まで明記された。oracle の「0 → 1 と上げて単調に暗くなるか」の目視は未実施（strata は 0.9.0 pin で測れず、他作品に vignette を測る検査が無い）"
       }
     },
     {
@@ -309,7 +309,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "2026-08-17 の巡回では未実施。権限 notDetermined の状態を作り直せない（TCC のリセットに管理者権限が要る）"
+        "note": "2026-08-24 の巡回でも未実施。権限 notDetermined の状態を作り直せない（TCC のリセットに管理者権限が要る）。人手での確認が要る"
       }
     },
     {
@@ -328,10 +328,10 @@
         "note": null
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": "2026-08-17 の巡回では未実施。地形シーンの frame.json 取得に CLI 経由の probe が要る"
+        "at": "2026-08-24",
+        "against": "main 04125fa5（ソース）",
+        "verdict": "PARTIAL（実装は解決 / 実測は未実施）",
+        "note": "DynamicMesh.swift が cachedVertexBuffer / cachedIndexBuffer を持ち、「既存バッファへ memcpy、足りなければ確保し直す」形になっている（以前は makeBuffer(bytes:) で毎回確保）。oracle の「地形シーンの frame.json の memoryMB とフレーム時間を報告時と比べる」は未実施（strata は 0.9.0 pin なので、比較には差し替えたビルドで frame.json を取り直す必要がある）"
       }
     },
     {
@@ -372,10 +372,10 @@
         "note": "cwd が / になり .metaphor/ が壊れる"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": "2026-08-17 の巡回では未実施。METAPHOR_STATE_DIR は main のソースにあるが、素の実行ファイル + METAPHOR_PROBE=1 では .metaphor/ が作られず（CLI 経由の起動が要る）、.app 起動での実挙動まで到達できなかった"
+        "at": "2026-08-24",
+        "against": "metaphor 0.13.0 + metaphor-cli 0.19.2",
+        "verdict": "PASS",
+        "note": "METAPHOR_STATE_DIR=<一時ディレクトリ> metaphor run --metrics で、.metaphor/probe/（request.json と current/）が 指定先に作られ、cwd 側には作られないことを実測（2026/0823-test で確認）。--metrics のポーリングが値を表示し続けたので、consumer 側も同じ基準を見ている。なお素の実行ファイルへ METAPHOR_PROBE=1 と METAPHOR_STATE_DIR を渡しただけでは どちらの場所にも .metaphor/ は作られない（CLI 経由の起動が要る）。oracle が指す .app 起動での確認は未実施だが、cwd 非依存の基準解決という根本は実測できた"
       }
     },
     {
@@ -419,7 +419,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "2026-08-17 の巡回では未実施。Syphon サーバ列挙ツールが作品側に残っていないため、実測には列挙ツールの作り直しが要る"
+        "note": "2026-08-24 の巡回でも未実施。Syphon は metaphor-syphon（v0.2.0）へ分離され、実測には Syphon サーバ列挙ツールの作り直しが要る。metaphor#716 で SIGTERM / SIGINT の retire は入っている"
       }
     },
     {
@@ -548,10 +548,10 @@
         "note": "metaphor#688 と対"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": "2026-08-17 の巡回では未実施。metaphor#688 と対で、同じく .app / CLI 経由の起動が要る"
+        "at": "2026-08-24",
+        "against": "metaphor-cli 0.19.2",
+        "verdict": "PASS",
+        "note": "metaphor#688 と同じ実測。metaphor run が METAPHOR_STATE_DIR を子プロセスへ通し、指定先に .metaphor/ ができる。watch 側は未実施（同じ経路）"
       }
     },
     {
@@ -573,7 +573,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "2026-08-17 の巡回では未実施。手元の brew 版 CLI は 0.10.2 で最新リリース 0.13.0 に追いついていない"
+        "note": "2026-08-24 の巡回でも未実施。手元の CLI は 0.19.2（最新）に追いついたが、oracle が「ビューアが復帰し続けるか」の目視なので人手での確認が要る。修正は metaphor-cli PR #140（ビューアが Syphon サーバの張り替えに失敗したら自力で復帰する）"
       }
     },
     {
@@ -639,10 +639,10 @@
         "note": "band0 の実測が 60–2715Hz（doc は 0–250Hz）/ volume が RMS の 4.000 倍で A≧0.354 で飽和"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-24",
+        "against": "v0.13.0（作品の pin）",
+        "verdict": "PASS",
+        "note": "A4 / A5 とも PASS。実装は報告時と同じで（band0 の担当は 60–2715Hz、volume は RMS の 4.000 倍）、doc のほうが実装に合わせて書き直された（PR #943）という解決。検査は旧 doc の「band0 の上端は 250Hz 近辺」「volume は RMS」を期待していたので、新しい約束（境界は sampleRate/16=2756Hz と sampleRate/4=11025Hz、volume=min(rms·4,1) で A≧0.354 から飽和）を測る形へ書き換えた。飽和の検証も足した（A=0.5 / 0.9 → どちらも 1.0000）"
       }
     },
     {
@@ -710,10 +710,10 @@
         "note": "config setter が合成を捨てる注記がソースにしか無い。llms.txt は要約 1 行だけ"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-24",
+        "against": "main 04125fa5 の llms.txt",
+        "verdict": "PASS",
+        "note": "llms.txt に Note / Important の本文が 219 件、要約行の下へ 2 スペースインデントで出るようになった（PR #969）。Issue 本文が名指ししていた 2 つを実測で確認: GKNoiseWrapper.config の「合成と変換が失われる」（2687 行）と AudioAnalyzer.sampleRate の「injectSamples 経路では必須」（2337 行）"
       }
     },
     {
@@ -1161,10 +1161,10 @@
         "note": "T2b が FAIL（delay 待ちと未 start がどちらも (false,false)）。T8 / T15 / T7 は挙動としては PASS で、doc 側の追記待ちなので判定には使わない"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-24",
+        "against": "v0.14.0",
+        "verdict": "PASS",
+        "note": "T2b PASS。#840 自体は doc 修正（PR #950）で閉じ、観測手段は #946 → PR #994 の isWaiting 追加で入った。実測: (isWaiting,isActive,isComplete) が delay 待ち=(true,false,false) / 未 start=(false,false,false) / 実行中=(false,true,false) / 完了=(false,false,true) と、doc の 4 状態 × 3 プロパティ表どおりに一意。検査は isActive / isComplete の 2 つ組で比べる形だったので isWaiting を含む 3 つ組へ書き換えた。あわせて作品の pin を 0.9.0 → 0.14.0 へ上げ、削除された Color(r:g:b:a:) を alpha: へ移した"
       }
     },
     {
@@ -1260,10 +1260,10 @@
         "note": "3D の後の 2D は重なる範囲で隠れる。箱を z=0 → -600 にしても変わらないので深度ではなくパス順。loadPixels() を挟むと上に出る"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-24",
+        "against": "v0.14.0（作品の pin）",
+        "verdict": "PASS",
+        "note": "X2b / X5 / X6 の 3 検査すべて PASS。実測: 3D の箱の後に描いた赤帯が、箱に重なる位置でも (1.000,0.000,0.000) で出る（報告時は隠れていた）。箱を z=0 → -600 に遠ざけても同じ。PR #976 の「分割点の吐き出し順を endFrame() と揃えた」修正どおり。X5 は「深度かパス順か」を切り分ける Observation（LOOK）だったが、修正後は 「遠近によらず呼んだ順どおり」を確かめる形になったので Verdict（PASS/FAIL）へ昇格させた"
       }
     },
     {
@@ -1282,10 +1282,10 @@
         "note": "trap multipass-effect = (1.000,1.000,0.773) / trap multipass-merged = (1.000,1.000,0.969)。どちらもブルームが正常に出る"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-24",
+        "against": "v0.14.0（作品の pin）",
+        "verdict": "PASS",
+        "note": "trap multipass-effect = (1.000,1.000,0.773) / trap multipass-merged = (1.000,1.000,0.969)。報告時の実測と一致し、どちらもブルームが正常に出る。Examples/Samples/RenderGraphCompose/RenderGraphCompose/App.swift から「崩れる」の注記は消え、多パス（Bloom）と単パス（Vignette）を 1 本のチェーンに連ねられる説明に書き換わっている（PR #945）"
       }
     },
     {
@@ -1447,10 +1447,10 @@
         "note": "resolve(requested: .timer(30), fps: 60, isHeadless: true) → timer(60)。ウィンドウ表示では timer(30) のままなので、同じ設定で経路により倍のレートになる"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": ""
+        "at": "2026-08-24",
+        "against": "main 04125fa5（修正 75ce2df9 は v0.14.0 に含まれる）",
+        "verdict": "PASS",
+        "note": "R1c.resolve.headlessKeepsExplicitFPS が PASS。実測: resolve(requested: .timer(30), fps: 60, isHeadless: true) が要件の有無によらず timer(30) を返す（報告時は timer(60) へ潰れていた）。盤全体 13 検査に退行なし"
       }
     },
     {
