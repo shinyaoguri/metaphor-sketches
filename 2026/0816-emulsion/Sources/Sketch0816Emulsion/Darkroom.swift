@@ -862,11 +862,23 @@ final class Darkroom {
         } else {
             farBand = (0, 0, 0)
         }
+        // metaphor#832 の修正（分割点の吐き出し順を endFrame() と揃えた）が入ってからは、
+        // 近い箱でも後の 2D が上に出る。この対照実験は「遠近によらず順どおり」を確かめる
+        // 形になったので、機構の切り分け（LOOK）から合否（PASS/FAIL）へ昇格させた。
         let farRed = isRed(farBand)
-        let mechanism = farRed
-            ? "箱を z=-600 へ遠ざけたら赤帯が出た → **深度比較**で負けていた（2D にも深度が効いている）"
-            : "箱を z=-600 へ遠ざけても緑のまま → **3D が 2D より後に塗られている**（深度ではなくパスの順序）"
-        observations.append(Observation(id: "X5.depthOrPassOrder",
+        let mechanism: String
+        if onBoxRed && farRed {
+            mechanism = "遠近どちらでも赤帯が出る → **呼んだ順どおり**に塗られている"
+                + "（深度でもパス順でも負けない。metaphor#832 の修正後の姿）"
+        } else if !onBoxRed && farRed {
+            mechanism = "近い箱では隠れ、z=-600 へ遠ざけたら赤帯が出た → **深度比較**で負けている"
+                + "（2D にも深度が効いている）"
+        } else if !onBoxRed && !farRed {
+            mechanism = "遠ざけても緑のまま → **3D が 2D より後に塗られている**（深度ではなくパスの順序）"
+        } else {
+            mechanism = "近い箱でだけ出て遠い箱で隠れた（説明が付かない。要追試）"
+        }
+        verdicts.append(Verdict(id: "X5.depthOrPassOrder", passed: onBoxRed && farRed,
             detail: "同じ描画順のまま箱の z だけを 0 → -600 に変えた対照実験: "
                 + "近い箱の上の帯=\(Hue.s(bandOnBox)) / 遠い箱の上の帯=\(Hue.s(farBand)) → \(mechanism)"))
 
