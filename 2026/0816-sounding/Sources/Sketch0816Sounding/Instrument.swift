@@ -208,25 +208,56 @@ enum Instrument {
         )
     }
 
-    /// A3: `sampleRate` を渡し忘れたまま `bandEnergy` を呼ぶと何が起きるか。
+    /// A3: `sampleRate` を渡し忘れたまま `bandEnergy` を呼ぶと**黙って**失敗するか。
     ///
-    /// doc は「injectSamples 経由の解析では周波数→ビン変換に使う」としか書いていない。
-    /// 未設定だと 0 が返るが、それは「そこにエネルギーが無い」と見分けが付かない。
+    /// 報告時（metaphor#783）は 0 が返るだけで、「そこにエネルギーが無い」と見分けが付かなかった。
+    /// 上流は **戻り値 0 は据え置いたまま警告を出す**形で解決した（PR #790）。
+    /// つまり直ったかどうかは戻り値ではなく **警告が出るか** で決まる。
+    ///
+    /// 警告は `debugWarning` から stdout へ出る（DEBUG ビルド限定・analyzer ごとに 1 回だけ）。
+    /// 検査の中から拾うには呼び出しのあいだだけ stdout を横取りするしかないので、
+    /// `capturingStandardOutput` で捕まえて文字列を突き合わせる。
     static func bandEnergyWithoutSampleRate() -> Verdict {
         let analyzer = analyzer(sampleRate: nil)
         feed(analyzer, Score.sine(frequency: 440, count: fftSize, amplitude: 0.5))
 
-        let energy = analyzer.bandEnergy(lowFreq: 350, highFreq: 550)
+        var energy: Float = 0
+        let logged = capturingStandardOutput {
+            energy = analyzer.bandEnergy(lowFreq: 350, highFreq: 550)
+        }
         let spectrumAlive = analyzer.spectrum.contains { $0 > 0.5 }
-        // スペクトルは出ているのに bandEnergy だけ 0 = 黙って失敗している状態。
-        let silentFailure = spectrumAlive && energy == 0
+        // 「0 を返した」ことではなく「0 を返すと言った」ことを見る。
+        let warned = logged.contains("sample rate is unknown")
+        let silentFailure = spectrumAlive && energy == 0 && !warned
         return Verdict(
             id: "A3.bandEnergyWithoutSampleRate",
             passed: !silentFailure,
             detail: "A3 sampleRate 未設定: bandEnergy=\(f(energy, 5))"
                 + " spectrum は生きている=\(spectrumAlive)"
-                + "（0 と『エネルギー無し』が区別できない）"
+                + " / 警告=\(warned ? "出た" : "出ない")"
+                + "（#790 の解決は「0 のまま警告を出す」形。警告が出れば誤設定と無エネルギーを区別できる）"
         )
+    }
+
+    /// `body` の実行中に stdout へ出た文字列を捕まえる。
+    ///
+    /// `debugWarning` は `print` なので、警告が出たかどうかはライブラリの公開 API からは読めない。
+    /// パイプへ差し替えて読み戻す（警告 1 行ぶんなのでパイプのバッファには収まる）。
+    static func capturingStandardOutput(_ body: () -> Void) -> String {
+        let pipe = Pipe()
+        fflush(stdout)
+        let saved = dup(STDOUT_FILENO)
+        dup2(pipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
+
+        body()
+
+        fflush(stdout)
+        dup2(saved, STDOUT_FILENO)
+        close(saved)
+        try? pipe.fileHandleForWriting.close()
+        let data = (try? pipe.fileHandleForReading.readToEnd()) ?? nil
+        try? pipe.fileHandleForReading.close()
+        return String(data: data ?? Data(), encoding: .utf8) ?? ""
     }
 
     /// A4: `band(0/1/2)` が実際にどの周波数で切れるか。
@@ -684,10 +715,15 @@ enum Instrument {
         )
     }
 
-    /// N9: `sampleGrid` と `sample` が同じ場を返すか。
+    /// N9: `sampleGrid` と `sample` の重なり方は docs どおりか。
     ///
-    /// `GKNoiseMap` は `size = sampleScale × (width, height)` を `sampleCount` で刻むので、
-    /// グリッド 1 マスは `sampleScale` ちょうど。`origin` が起点になる。
+    /// metaphor#785 は **docs で確定する**形で解決した（`GKNoiseGenerator` の
+    /// "Two entry points, two coordinate spaces"）。`sample(x:y:)` は `origin` も
+    /// `sampleScale` も適用せず、`sampleGrid` は両方を `GKNoiseMap` へ渡す。
+    /// 重なるのは **index (0, 0) の 1 点だけ**で、`origin + index × sampleScale` を
+    /// `sample()` に当ててもグリッドの i 番目は再現しない（実効ステップは `sampleScale`
+    /// だけでなくグリッド寸法にも依る）。挙動は報告時から変わっていないので、
+    /// 検査を「一致するはず」から「**docs が約束する形で食い違うはず**」へ向け直す。
     /// **この作品はグリッドを一次証拠に使うので、ここが崩れると全部崩れる。**
     static func gridMatchesSample(_ makeNoise: NoiseFactory) -> Verdict {
         let spacing = 0.02
@@ -702,19 +738,19 @@ enum Instrument {
         let height = 64
         let grid = noise.sampleGrid(width: width, height: height)
 
-        // 起点は合っている。grid[0] は origin そのものを指す。
+        // 約束その 1: 唯一の重なりである index (0, 0)。grid[0] は sample(origin) と一致する。
         let atOrigin = noise.sample(x: origin.x, y: origin.y)
         let originMatches = abs(grid[0] - atOrigin) < 1e-4
 
-        // 行 0 の全点で比べる。
+        // 約束その 2: そこから先は重ならない。`origin + col × sampleScale` を sample() に
+        // 当てても grid[col] にはならない（別座標系なので当たる方が異常）。
         //
-        // 「刻みを総当たりして一番合うものを探す」のは一度やって捨てた。
-        // 点数を絞ると滑らかな関数には複数の刻みが同程度に当てはまり、
-        // 正方格子なのに x と y で別の答えが出る（= 見せかけの最小値）。
-        // 行全体を使った残差の方が正直な数字になる。
+        // 行 0 の全点で比べる。「刻みを総当たりして一番合うものを探す」のは一度やって捨てた。
+        // 点数を絞ると滑らかな関数には複数の刻みが同程度に当てはまり、正方格子なのに
+        // x と y で別の答えが出る（= 見せかけの最小値）。行全体を使った残差の方が正直な数字になる。
         var worst: Float = 0
         var worstAt = 0
-        for col in 0..<width {
+        for col in 1..<width {
             let expected = noise.sample(x: origin.x + Double(col) * spacing, y: origin.y)
             let delta = abs(grid[col] - expected)
             if delta > worst {
@@ -722,23 +758,29 @@ enum Instrument {
                 worstAt = col
             }
         }
+        let diverges = worst > 1e-4
 
-        let ok = worst < 1e-4
+        let ok = originMatches && diverges
         return Verdict(
             id: "N9.gridMatchesSample",
             passed: ok,
             detail: "N9 grid(64×64) 行 0: grid[0]==sample(origin)=\(originMatches)"
                 + "（\(f(grid[0], 5)) vs \(f(atOrigin, 5))）/"
-                + " 1 マス=sampleScale(\(f(spacing, 3))) としたときの最大差=\(f(worst, 5))"
-                + "（col=\(worstAt)）期待<0.00010"
+                + " col≥1 を 1 マス=sampleScale(\(f(spacing, 3))) と読んだときの最大差=\(f(worst, 5))"
+                + "（col=\(worstAt)）→ 別座標系として食い違う=\(diverges)"
+                + " / docs が約束するのは (0,0) の一致だけ"
         )
     }
 
-    /// N8: `origin` / `sampleScale` は `sample(x:y:)` に効くのか。
+    /// N8: `origin` / `sampleScale` の効く範囲は docs どおりか。
     ///
     /// 実装上 `sample` は `gkNoise.value(atPosition:)` を直接呼ぶだけで、
-    /// この 2 つはグリッド／テクスチャ経路にしか効かない。同じ座標を指す 2 つの入口が
-    /// 別の答えを返すことになるので、その差を数値で残しておく。
+    /// この 2 つはグリッド／テクスチャ経路にしか効かない。報告時（metaphor#785）は
+    /// 「同じ座標を指す 2 つの入口が別の答えを返す」ことを問題として挙げたが、
+    /// 上流は **その非対称を仕様として docs に明記する**形で解決した
+    /// （`sample(x:y:)`: "neither origin nor sampleScale is applied"）。
+    /// なので検査も「一致すべき」から「**宣言どおり非対称であるべき**」へ向け直す。
+    /// 差の数値は変わらず detail に残すので、非対称の中身は今までどおり読める。
     static func originIgnoredBySample(_ makeNoise: NoiseFactory) -> Verdict {
         var base = NoiseConfig(octaves: 4, frequency: 1.4, seed: 21)
         base.normalized = true
@@ -763,9 +805,9 @@ enum Instrument {
         let atOriginOfGrid = plain.sample(x: Float(5.37), y: Float(5.61))
         let gridHonors = abs(movedGrid - atOriginOfGrid) < 1e-4
 
-        // 「同じ座標を指す 2 つの入口が同じ答えを返す」なら PASS。
-        // 片方だけが origin/sampleScale を見るなら、それは覚えておくべき非対称。
-        let ok = !(sampleIgnores && gridHonors)
+        // docs が宣言する非対称（sample は無視 / grid は反映）どおりなら PASS。
+        // どちらかが崩れたら、それは docs と実装が食い違ったということ。
+        let ok = sampleIgnores && gridHonors
         return Verdict(
             id: "N8.originScope",
             passed: ok,
@@ -773,6 +815,7 @@ enum Instrument {
                 + "（(0.37, 0.61) で \(f(atProbe, 5)) vs \(f(movedAtProbe, 5))）"
                 + " / sampleGrid が反映=\(gridHonors)"
                 + "（grid[0]=\(f(movedGrid, 5)) sample(5.37, 5.61)=\(f(atOriginOfGrid, 5))）"
+                + " / docs の宣言はこの非対称そのもの"
         )
     }
 
