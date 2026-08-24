@@ -147,8 +147,8 @@ enum Palette {
 
     static func interpolation() -> [Verdict] {
         var out: [Verdict] = []
-        let c1 = Color(r: 0.2, g: 0.4, b: 0.6, a: 0.8)
-        let c2 = Color(r: 0.8, g: 0.2, b: 0.0, a: 0.4)
+        let c1 = Color(r: 0.2, g: 0.4, b: 0.6, alpha: 0.8)
+        let c2 = Color(r: 0.8, g: 0.2, b: 0.0, alpha: 0.4)
 
         // A6: 3 つの入口（グローバル関数・メソッド・型メソッド）が同じ答えを出すか。
         //     同じ計算に入口が 3 つあるので、どれか 1 つだけ古い実装ということがありうる。
@@ -236,31 +236,43 @@ enum Palette {
                     + " / \"#80FF8033\" → \(long.map { Hue.s(rgba($0)) } ?? "nil") 期待 a=0.502"))
         }
 
-        // A12: 形式外の文字列で nil を返すか（失敗系）。
+        // A12: 桁数を綴りから数えているか（失敗系＋意図して受ける 3 桁短縮形）。
         //
-        //     doc は受け付ける形を "#RRGGBB" と "#AARRGGBB" に限っている。それ以外の桁数は
-        //     形式外なので nil が期待。**16 進として読めてしまう桁数**（1〜5, 7 桁）を重点的に
-        //     並べる。ここが素通りすると、打ち間違いが nil ではなく「別の色」として静かに通る。
+        //     報告時（metaphor#799）は桁数を検証しておらず、"#FFF" が白ではなく青になっていた。
+        //     いまは **3 桁・6 桁・8 桁だけを受ける**と doc に明記され、3 桁は CSS と同じ短縮形
+        //     として各桁を 2 倍に展開する（"#FFF" は白）。**4 桁は受けない** — このライブラリの
+        //     8 桁は AARRGGBB（CSS の RRGGBBAA と逆順）なので、4 桁は ARGB とも RGBA とも読め、
+        //     どちらに決めてももう一方が黙って別の色になるため。形式外が素通りすると打ち間違いが
+        //     nil ではなく「別の色」として静かに通るので、**16 進として読めてしまう桁数**
+        //     （1, 4, 5, 7 桁）を重点的に並べる。
         do {
-            let cases = [
+            let rejected = [
                 "#GGGGGG",      // 16 進でない
                 "",             // 空
                 "not a color",  // 語
                 "#",            // 記号だけ
                 "#F",           // 1 桁
-                "#FFF",         // 3 桁（CSS の短縮形。CSS なら白）
+                "#FFFF",        // 4 桁（doc が明示して拒む短縮形）
                 "#12345",       // 5 桁
                 "#1234567",     // 7 桁
+                "+FFFFF",       // 符号つき（UInt32(_:radix:) は先頭の符号を受けてしまう）
             ]
-            let results = cases.map { (input: $0, color: Color(hex: $0)) }
-            let accepted = results.filter { $0.color != nil }
-            let ok = accepted.isEmpty
+            let accepted = rejected.map { (input: $0, color: Color(hex: $0)) }.filter { $0.color != nil }
             let shown = accepted.isEmpty
                 ? "すべて nil"
                 : accepted.map { "\"\($0.input)\"→\(Hue.s(rgba($0.color!)))" }.joined(separator: " ")
-            out.append(Verdict(id: "A12.hexStringInvalid", passed: ok,
-                detail: "形式外 \(cases.count) 件中 \(accepted.count) 件が色として通った: \(shown)"
-                    + " / 期待=すべて nil（doc の形式は \"#RRGGBB\" と \"#AARRGGBB\" のみ）"))
+
+            // 3 桁は「通ってよい」ではなく「CSS どおりに展開されるべき」。
+            let white = Color(hex: "#FFF")
+            let mixed = Color(hex: "#0AF")
+            let shortOK = (white.map { Hue.rgbEq(rgb($0), (1, 1, 1), Hue.quantized) } ?? false)
+                && (mixed.map { Hue.rgbEq(rgb($0), (0, 170.0 / 255.0, 1.0), Hue.quantized) } ?? false)
+
+            out.append(Verdict(id: "A12.hexStringInvalid", passed: accepted.isEmpty && shortOK,
+                detail: "形式外 \(rejected.count) 件中 \(accepted.count) 件が色として通った: \(shown)"
+                    + " / 3 桁短縮形 \"#FFF\"→\(white.map { Hue.s(rgb($0)) } ?? "nil")（期待 (1,1,1)）"
+                    + " \"#0AF\"→\(mixed.map { Hue.s(rgb($0)) } ?? "nil")（期待 (0,0.667,1)）"
+                    + " / doc が受けるのは 3・6・8 桁のみ"))
         }
 
         return out
@@ -286,7 +298,7 @@ enum Palette {
 
         // A14: `withAlpha` は RGB を触らずアルファだけ差し替えるか。
         do {
-            let base = Color(r: 0.2, g: 0.4, b: 0.6, a: 1.0)
+            let base = Color(r: 0.2, g: 0.4, b: 0.6, alpha: 1.0)
             let faded = base.withAlpha(0.3)
             let ok = Hue.rgbEq(rgb(faded), rgb(base), Hue.exact) && Approx.eq(faded.a, 0.3, Hue.exact)
             out.append(Verdict(id: "A14.withAlpha", passed: ok,
@@ -296,7 +308,7 @@ enum Palette {
         // A15: `simd` の成分順が (r, g, b, a) か。ここが入れ替わっていると
         //      シェーダへ渡した色だけが化けるという分かりにくい壊れ方をする。
         do {
-            let c = Color(r: 0.1, g: 0.2, b: 0.3, a: 0.4)
+            let c = Color(r: 0.1, g: 0.2, b: 0.3, alpha: 0.4)
             let v = c.simd
             let ok = Approx.eq(v.x, 0.1, Hue.exact) && Approx.eq(v.y, 0.2, Hue.exact)
                 && Approx.eq(v.z, 0.3, Hue.exact) && Approx.eq(v.w, 0.4, Hue.exact)

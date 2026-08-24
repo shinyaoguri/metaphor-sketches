@@ -275,14 +275,14 @@ final class Sketch0816Prism: Sketch {
 
         // 入射する白色光。ここはまだ 1 本。
         blendMode(.alpha)
-        stroke(Color(r: 1, g: 1, b: 0.96, a: 0.85))
+        stroke(Color(r: 1, g: 1, b: 0.96, alpha: 0.85))
         strokeWeight(3)
         line(sourcePoint.x, sourcePoint.y, entry.x, entry.y)
 
         drawPrism()
 
         // ガラスの中の光路。入射面と出射面の中点を結ぶ近似で、内部の屈折までは追わない。
-        stroke(Color(r: 0.9, g: 0.95, b: 1, a: 0.35))
+        stroke(Color(r: 0.9, g: 0.95, b: 1, alpha: 0.35))
         strokeWeight(2)
         line(entry.x, entry.y, exit.x, exit.y)
 
@@ -425,8 +425,8 @@ final class Sketch0816Prism: Sketch {
     private func drawPrism() {
         let v = prismVertices
         blendMode(.alpha)
-        fill(Color(r: 0.62, g: 0.76, b: 0.92, a: 0.13))
-        stroke(Color(r: 0.78, g: 0.88, b: 1.0, a: 0.55))
+        fill(Color(r: 0.62, g: 0.76, b: 0.92, alpha: 0.13))
+        stroke(Color(r: 0.78, g: 0.88, b: 1.0, alpha: 0.55))
         strokeWeight(2)
         triangle(v.top.0, v.top.1, v.left.0, v.left.1, v.right.0, v.right.1)
         noStroke()
@@ -436,7 +436,7 @@ final class Sketch0816Prism: Sketch {
     private func drawSourceGlow() {
         blendMode(.additive)
         radialGradient(sourcePoint.x, sourcePoint.y, 78,
-                       Color(r: 1, g: 0.98, b: 0.92, a: 0.55), Color.clear,
+                       Color(r: 1, g: 0.98, b: 0.92, alpha: 0.55), Color.clear,
                        segments: 48)
         blendMode(.alpha)
     }

@@ -283,7 +283,7 @@ enum Spectrometer {
                 c.background(Color.white)
                 c.blendMode(.alpha)
                 c.noStroke()
-                c.fill(Color(r: 0, g: 0, b: 0, a: 0.5))
+                c.fill(Color(r: 0, g: 0, b: 0, alpha: 0.5))
                 c.rect(box.x, box.y, box.w, box.h)
             }
             let got = plate.at(probePoint.x, probePoint.y)
