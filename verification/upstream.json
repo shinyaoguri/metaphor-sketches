@@ -309,7 +309,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "2026-08-24 の巡回でも未実施。権限 notDetermined の状態を作り直せない（TCC のリセットに管理者権限が要る）。人手での確認が要る"
+        "note": "2026-08-31 の巡回でも判定は出せない。今回分かったこと: 修正 (PR #699) は **v0.10.0 に載っている**。内容は「isAvailable を false にする」ではなく、`CaptureDevice.authorizationStatus` / `isAuthorized` を 公開し、権限待ちのときに release ビルドでも stderr へ出る `metaphorAlert` を足すもので、isAvailable が notDetermined でも true なのは **doc で明記された仕様** になった (CaptureDevice.swift:158-161)。0815-strata は 0.9.0 pin のままで、この API が使えないので 自前で AVCaptureDevice を読んでいる (CameraSense.authorizationLabel)。main へ差し替えて確かめようとしたが **SketchConfig の引数が増えていてビルドが通らない** (App.swift:44 extra arguments #5,#6)。判定には (1) 作品の pin を上げる (2) TCC を notDetermined へ戻す (管理者権限) の両方が要る"
       }
     },
     {
@@ -419,7 +419,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "2026-08-24 の巡回でも未実施。Syphon は metaphor-syphon（v0.2.0）へ分離され、実測には Syphon サーバ列挙ツールの作り直しが要る。metaphor#716 で SIGTERM / SIGINT の retire は入っている"
+        "note": "2026-08-31 の巡回でも未実施。Syphon は metaphor-syphon (v0.2.0) へ分離され、実測には Syphon サーバ列挙ツールの作り直しが要る。metaphor#716 で SIGTERM / SIGINT の retire は入っている。0815-lifegame は 0.9.0 pin のままで、strata と同じく main ではビルドが通らない見込み (SketchConfig の引数増) なので、判定の前に pin を上げる作業が要る"
       }
     },
     {
@@ -573,7 +573,7 @@
         "at": null,
         "against": null,
         "verdict": null,
-        "note": "2026-08-24 の巡回でも未実施。手元の CLI は 0.19.2（最新）に追いついたが、oracle が「ビューアが復帰し続けるか」の目視なので人手での確認が要る。修正は metaphor-cli PR #140（ビューアが Syphon サーバの張り替えに失敗したら自力で復帰する）"
+        "note": "2026-08-31 の巡回でも未実施。oracle が「ビューアが復帰し続けるか」の目視なので人手での確認が要る。修正は metaphor-cli PR #140 (ビューアが Syphon サーバの張り替えに失敗したら自力で復帰する)。手元の CLI は 0.23.2 (最新) まで来ている"
       }
     },
     {
@@ -1535,10 +1535,10 @@
         "note": "doc の並び（color / diameter / position）どおりに MSL を書くとコンパイルは通り、無警告で 1 つも描かれない。実体は position@0 / diameter@8 / 内部の詰め物@12 / color@16 で stride 32"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-31",
+        "against": "main 57c1a589 (v0.14.0 + 未リリースの修正)",
+        "verdict": "PASS",
+        "note": "llms.txt に載った。`circles(_:count:)` (150-154 行) に「バイト列そのままで描くので compute カーネルは CircleInstance のメモリ順で宣言する — position@0 / diameter@8 / padding@12 / color@16 / stride 32」、`struct CircleInstance` (732-734 行) に貼れる MSL 定義`struct CircleInstance { float2 position; float diameter; float _pad; float4 color; };` と、アルファベット順で書くと「警告なし・32 バイトのまま・1 つも描かれない」ことまで書かれている。G10.layout は Swift 側の実レイアウトを測るだけなので pin 前後で PASS のまま変わらない (stride 32 / position@0 / diameter@8 / color@16)。PR #1143 でマージ済み・**v0.14.0 には入っていない**"
       }
     },
     {
@@ -1548,8 +1548,12 @@
       "sketch": "2026/0824-duet",
       "ourIssue": 26,
       "oracle": {
-        "kind": "manual",
-        "how": "DUET_TRAP=alloc で起動して、createBuffer(count: Int.max/8) が trap せず nil を返すか（落ちなくなれば PASS）。常時実行すると起動できないので自己検査 ID には載せていない"
+        "kind": "check",
+        "ids": [
+          "G8b.allocOverflow"
+        ],
+        "verdictCommand": "tools/probe.sh trap alloc",
+        "how": "createBuffer(count: Int.max/8) が trap せず nil を返すか。常時実行すると未修正版で 起動できないので DUET_TRAP=alloc のときだけ出す検査にしてある (未修正版では即死して G8b の行が 1 行も出ない = 拾えない)"
       },
       "baseline": {
         "metaphor": "0.13.0",
@@ -1557,10 +1561,10 @@
         "note": "createBuffer(count: Int.max/8, type: Voice.self) が Swift runtime failure: arithmetic overflow で即死。count:0 と count:2^34 は期待どおり nil"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-31",
+        "against": "main 57c1a589 (v0.14.0 + 未リリースの修正)",
+        "verdict": "PASS",
+        "note": "createBuffer(count: Int.max/8 = 1152921504606846975, stride 24) → nil。実測: v0.14.0 では この行から戻らず Trace/BPT trap 5 で即死、main では nil が返ってプロセスは生きたまま。PR #1124 でマージ済み・**v0.14.0 には入っていない**。再検証のたびに手で確かめずに済むよう G8b.allocOverflow を足した (manual → check)"
       }
     },
     {
@@ -1581,10 +1585,10 @@
         "note": "setup() から dispatch を呼ぶと書き込みが起きない（実測 -1 のまま）。threads:0 は警告するのに、コマンドバッファが無い経路は無言。G14 は「書き込み無し」を LOOK で記録しているので、上流が警告を足したら検査側も警告の有無を見る形へ直す"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-31",
+        "against": "main 57c1a589 (v0.14.0 + 未リリースの修正)",
+        "verdict": "PASS",
+        "note": "警告が出るようになった。実測 (DEBUG): `[metaphor] Warning: dispatch: compute work can only be encoded from compute() — called outside the compute phase (setup()/draw()); skipped` と 同文の `computeBarrier:` の 2 本。書き込みが起きないこと自体は起票時と同じ (実測 -1)。台帳の予告どおり G14 を「書き込み無し」の LOOK から「書き込み無し **かつ** dispatch / computeBarrier の両方が警告する」の PASS/FAIL へ昇格させた (標準出力を横取りして拾う)。v0.14.0 では FAIL (警告なし) / main で PASS。PR #1125 でマージ済み・**v0.14.0 には入っていない**。警告は metaphorWarning = DEBUG ビルド限定なので、release ビルドでは今も無言"
       }
     },
     {
@@ -1607,10 +1611,10 @@
         "note": "dispatch 直後の toArray() は投げる前の内容（実測 0 / 次フレーム 12345）。完了を待つ公開 API が無く、loadPixels() だけが実質の同期。computeBarrier はエンコーダが直列なので不要（65536 要素の依存連鎖でバリア無しでも不一致 0 件）"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": null
+        "at": "2026-08-31",
+        "against": "main 57c1a589 (v0.14.0 + 未リリースの修正)",
+        "verdict": "PASS",
+        "note": "llms.txt が「いつ読めるか」を書くようになった。`GPUBuffer` (1648-1650 行) に 「読み出しは GPU を待たない / dispatch はエンコードするだけ」「次フレームも保証ではない / 待つ公開 API は loadPixels() だけ」、`toArray()` と `subscript` にも同じ - Important:、`computeBarrier` (163-166 行) に「今のエンコーダ (MTLDispatchType.serial) では no-op だが concurrent になった瞬間に効くので依存があるなら呼べ」。読み出し API そのものは Issue #1136 で 追跡中と明記された。自己検査の実測は起票時と同じ (G7.readback は dispatch 直後 0 / 次フレーム 12345、G7b は同フレームで loadPixels を挟めば 12345、G6 はバリア有無どちらも不一致 0 件) で、doc がその実測どおりの説明になった。PR #1137 でマージ済み・**v0.14.0 には入っていない**"
       }
     },
     {
@@ -1695,10 +1699,10 @@
         "note": "setup() で perspective(fov: 32°) を 1 度呼んだだけでは効かず、既定の 60° で黙って描かれる。エラーも警告も出ないので、シルエットの実測とカメラ距離の計算が合わなくて初めて分かった"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": ""
+        "at": "2026-08-31",
+        "against": "main 57c1a589 (v0.14.0 + 未リリースの修正)",
+        "verdict": "PASS",
+        "note": "両方に載った。llms.txt は perspective / ortho / camera / lights 系 / material 系 / texture / material に - Note: **Resets every frame.** が付き (例: 436 行の perspective は「既定の 60° へ戻るので draw() から呼べ・setup() の呼び出しは最初のフレームの前に捨てられる」)、フレームを跨ぐ側 (noEnvironment など) には **Survives across frames.** が付いた。llms-sketch.txt には 「What Survives A Frame Boundary」節が新設され、リセットされる側／跨ぐ側の一覧表と 「style は残る、scene は残らない」の指針、setup() の telephoto perspective がまさに既定の 60° で 描かれる例まで書かれている。PR #1148 でマージ済み・**v0.14.0 には入っていない**"
       }
     },
     {
@@ -1730,8 +1734,12 @@
       "sketch": "2026/0824-insignia",
       "ourIssue": 27,
       "oracle": {
-        "kind": "manual",
-        "how": "tools/replay-input.py drag を、App.swift の `sensitivity = 0.005 * (1 - damping)` の補正を外した状態で走らせる。直っていれば補正なしでも 600px のドラッグが -3.0 rad（= 600 × 0.005）になる"
+        "kind": "check",
+        "ids": [
+          "C1.dragGain"
+        ],
+        "verdictCommand": "tools/replay-input.py --raw drag",
+        "how": "--raw は INSIGNIA_RAWCAM=1 を立てて作品側の受け止め (感度補正・押下ガード・1 フレームの回転上限) を全部外す。直っていれば補正なしでも 600px のドラッグが -3.0 rad (= 600 × 0.005) になる"
       },
       "baseline": {
         "metaphor": "0.13.0",
@@ -1739,10 +1747,10 @@
         "note": "damping 0.86 / sensitivity 0.005 で 600px ドラッグすると -25.36 rad（4.0 回転）。期待は -3.0 rad。sensitivity を (1-damping) 倍すると -3.00 rad に一致する"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": ""
+        "at": "2026-08-31",
+        "against": "main 57c1a589 (v0.14.0 + 未リリースの修正)",
+        "verdict": "PASS",
+        "note": "補正を外して 600px ドラッグ → -2.9994 rad (期待 -3.0±0.15)。同じ測り方で v0.14.0 は -44.2851 rad なので、pin (v0.14.0) → main で直ったことまで同一実行で裏が取れている。**起票時の記録 -25.36 rad とは測り方が違うので数字は一致しない** — 起票時は感度補正だけを 外した値で、今回は押下ガードと 1 フレーム上限も外しており、押下フレームの飛びが次フレーム以降へ 波及するぶん (PR #1141 の説明) が上乗せされている。内訳が残っていないのでどちらが正しいかは 確定できない。意味があるのは同条件で測った -44.29 → -3.00 の差。作品を手で書き換えて戻す手順を無くすため INSIGNIA_RAWCAM を足して manual → check にした。PR #1130 でマージ済み・**v0.14.0 には入っていない**"
       }
     },
     {
@@ -1752,8 +1760,12 @@
       "sketch": "2026/0824-insignia",
       "ourIssue": 27,
       "oracle": {
-        "kind": "manual",
-        "how": "tools/replay-input.py press を、App.swift の押下フレームのガード（pressArrived）を外した状態で走らせる。直っていればガード無しでも方位角が動かない"
+        "kind": "check",
+        "ids": [
+          "C2.pressJump"
+        ],
+        "verdictCommand": "tools/replay-input.py --raw press",
+        "how": "--raw (INSIGNIA_RAWCAM=1) で作品側の押下ガードを外し、押下 1 回だけを送る。直っていればガード無しでも方位角が動かない"
       },
       "baseline": {
         "metaphor": "0.13.0",
@@ -1761,10 +1773,10 @@
         "note": "起動直後（pmouse=0）にキャンバス中央 (640,400) で 1 回押しただけ、移動も解放もしていない状態で方位角が -3.2000 rad 動く（= 640px × 0.005）。期待は 0"
       },
       "recheck": {
-        "at": null,
-        "against": null,
-        "verdict": null,
-        "note": ""
+        "at": "2026-08-31",
+        "against": "main 57c1a589 (v0.14.0 + 未リリースの修正)",
+        "verdict": "PASS",
+        "note": "ガードを外してキャンバス中央 (640,400) を 1 回押すだけ → 方位角の変化 +0.0000 rad (期待 0±0.01)。同じ測り方で v0.14.0 は -22.8564 rad。修正は押下フレームだけ pmouse ではなく押下位置を起点に 測る形 (InputManager の isMousePressedThisFrame / mousePressX/Y)。**stuck (押しっぱなしのまま移動) には合否を置かないことにした** — 素の metaphor では -2.9994 rad 回るのが正しく (押下中に動けば回る)、押しっぱなしになること自体は ビューア側の metaphor-cli#189 で、この再生はビューアを通さず stdin へ直接流すので そもそも #189 の判定にならない。前の測定で 0 に見えたのは作品側の buttonStateSuspect ガードを 測っていたため。PR #1141 でマージ済み・**v0.14.0 には入っていない**"
       }
     }
   ]
