@@ -135,7 +135,11 @@ final class Sketch0824Insignia: Sketch {
         // 定常状態の速度は 1/(1 - damping) 倍になるので、0.86 のままだと
         // ドラッグ量の 7.1 倍回ってしまう。感度側で割って 1:1 に戻す
         // （慣性の余韻は残したまま、総回転量が damping 無しと一致する）。
-        orbitCamera.sensitivity = 0.005 * (1 - orbitCamera.damping)
+        //
+        // `INSIGNIA_RAWCAM=1` はこの補正と下の押下ガードをまとめて外し、
+        // **metaphor の素の挙動**を測れるようにする（metaphor#1099 / #1100 の再検証用。
+        // tools/replay-input.py --raw が立てる）。作品の既定は補正ありのまま。
+        orbitCamera.sensitivity = rawCam ? 0.005 : 0.005 * (1 - orbitCamera.damping)
         orbitCamera.zoomSensitivity = 0.6
 
         let initial = pose(for: views[0])
@@ -223,9 +227,9 @@ final class Sketch0824Insignia: Sketch {
 
         // `orbitControl()` は「押下中か」と「前フレームからの移動量」だけで回すので、
         // 押下状態や座標が飛ぶと、こちらの意図と無関係に回る。3 段で受け止める。
-        let pressedNow = pressArrived
+        let pressedNow = pressArrived && !rawCam
         pressArrived = false
-        if buttonStateSuspect || pressedNow {
+        if (buttonStateSuspect && !rawCam) || pressedNow {
             // (1) 押されていないのに押下中とされているフレーム、(2) 押下が届いたフレーム。
             //     後者は「押した瞬間」であってドラッグではない（カーソルが前回位置から
             //     離れていると、その差がまるごと回転として入ってしまう）。
@@ -237,7 +241,7 @@ final class Sketch0824Insignia: Sketch {
             //     入力の飛びとみなして頭を押さえる。素直なドラッグでは届かない値。
             // 1 フレームのあいだに角度が 2π を跨ぐことは無いので、生の差で見る
             // （shortestArc で畳むと、-3.2rad の飛びが +0.25rad の回転に化ける）。
-            let maxStep: Float = 0.25
+            let maxStep: Float = rawCam ? .infinity : 0.25
             let dAz = orbitCamera.azimuth - held.azimuth
             if abs(dAz) > maxStep {
                 orbitCamera.azimuth = held.azimuth + (dAz < 0 ? -maxStep : maxStep)
@@ -266,6 +270,12 @@ final class Sketch0824Insignia: Sketch {
 
     /// 押下がこのフレームに届いたか（押した瞬間をドラッグとして扱わないための印）。
     private var pressArrived = false
+
+    /// 作品側の受け止め（感度補正・押下ガード・1 フレームの回転上限）を全部外すか。
+    ///
+    /// 外すと `orbitControl()` が回した量がそのまま方位角に出るので、上流が直ったかを
+    /// **作品を書き換えずに**測れる。既定は false（作品としてはガードありが正しい姿）。
+    private let rawCam = ProcessInfo.processInfo.environment["INSIGNIA_RAWCAM"] == "1"
 
     func mousePressed() {
         buttonStateSuspect = false  // 本物の押下が来た = 状態は信用できる

@@ -54,7 +54,8 @@ Measured on this machine (Apple GPU, `threadExecutionWidth` 32, metaphor 0.13.0)
 | G11.circlesCount | PASS | 省略→5, 3→3, 99→5, 0→0, -5→0 (counted off the pixels) |
 | G12.compileError | PASS | broken MSL throws, and the message names the identifier |
 | G13.kernelBuild | LOOK | 5 kernels in 0.2 ms — paid again on every hot reload |
-| G14.dispatchOutsideFrame | LOOK | `dispatch` from `setup()` does nothing, **and says nothing** |
+| G14.dispatchOutsideFrame | FAIL on v0.14.0 | `dispatch` from `setup()` does nothing, **and says nothing** — PASS on `main` |
+| G8b.allocOverflow | — | only under `tools/probe.sh trap alloc`: `count: Int.max/8` traps on v0.14.0, returns nil on `main` |
 
 Each check was verified by breaking the thing it watches (wrong damping, a kernel that stops
 at gid 60, column-major indexing, a poisoned chain, a different fill value) and confirming it
@@ -65,9 +66,16 @@ change lands first**, so G1 now watches both.
 ## Notes for whoever reads the code
 
 - **`dispatch` only works inside `compute()`.** Outside it there is no command buffer, and
-  `ensureComputeEncoder()` returns nil without a word. `threads: 0` warns; this does not.
+  `ensureComputeEncoder()` returns nil. On the pinned v0.14.0 it does so without a word —
+  `threads: 0` warns, this does not ([metaphor#1092](https://github.com/shinyaoguri/metaphor/issues/1092)).
+  Fixed on `main`, where `dispatch` and `computeBarrier` each warn once in DEBUG builds; G14 now
+  captures stdout and checks for both warnings, so it is FAIL on the pin and PASS on `main`.
+  Release builds stay silent either way (`metaphorWarning` is `#if DEBUG`).
 - **There is no public way to wait for compute.** `toArray()` right after `dispatch` hands
-  back the pre-dispatch contents. The kernel writes its own step number into a status buffer
+  back the pre-dispatch contents. The behaviour has not changed, but `main` now *documents* it
+  ([metaphor#1093](https://github.com/shinyaoguri/metaphor/issues/1093)): `GPUBuffer`, `toArray()`
+  and `subscript` all say the read never waits, `loadPixels()` is named as the only API that does,
+  and a real readback is tracked as metaphor#1136. The kernel writes its own step number into a status buffer
   here, and the readback is matched against the CPU snapshot of *that* step — comparing
   "probably one frame behind" would report the lag as a disagreement.
 - **`computeBarrier()` is not what keeps the chain honest.** metaphor makes the encoder with
@@ -77,6 +85,9 @@ change lands first**, so G1 now watches both.
   alphabetically (color / diameter / position); memory is position → diameter → padding →
   color. Write the MSL struct in doc order and it still compiles — the right hand simply goes
   silent. See the picture in [#26](https://github.com/shinyaoguri/metaphor-sketches/issues/26).
+  `main` now carries the pasteable MSL declaration and the offsets on both `circles(_:count:)`
+  and `CircleInstance` ([metaphor#1090](https://github.com/shinyaoguri/metaphor/issues/1090)) —
+  not in v0.14.0, which is what this sketch pins.
 - **Out-of-range kernel writes land in someone else's buffer.** `tools/probe.sh trap oob`
   dispatches 96 threads at a 64-element buffer; the process survives and *another* buffer's
   contents change (G11 starts reporting 1 circle where it should report 5). Nothing warns.
@@ -104,3 +115,10 @@ tools/probe.sh soak 180            # release で無人稼働し RSS / CPU の傾
 
 The traps are behind an env var on purpose: `alloc` and `index` kill the process, and a check
 that kills the process at startup means there is no piece left to look at.
+
+`alloc` — `createBuffer(count: Int.max / 8)`, where `stride × count` overflows `Int` before the
+guard — is fixed on `main` and returns nil instead of trapping
+([metaphor#1091](https://github.com/shinyaoguri/metaphor/issues/1091)), but **not in v0.14.0**,
+which is what this sketch pins. Since it no longer kills the process there, the trap prints a
+`G8b.allocOverflow` verdict when it survives; on the pin the line simply never appears, which is
+the FAIL. It stays behind the env var until the pin moves to a release that carries the fix.

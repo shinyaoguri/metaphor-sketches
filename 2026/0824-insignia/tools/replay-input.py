@@ -8,6 +8,7 @@
     tools/replay-input.py stuck    mouseDown のあと mouseUp が来ないまま mouseMove が続く
     tools/replay-input.py drag     正常なドラッグ (mouseDown → mouseDrag → mouseUp)
     tools/replay-input.py press    押下 1 回だけ。移動も解放もしない
+    tools/replay-input.py --raw    作品側の受け止めを外し、metaphor の素の挙動を測る
 
 どれも水平に 600px ぶんの入力を送り、カメラの方位角がいくら動いたかを出す。
 判定の目安（metaphor 0.13.0 / この作品の設定）:
@@ -17,6 +18,11 @@
 | stuck | 0 rad。押していないのだから回ってはいけない |
 | drag  | -3.0 rad。600px × sensitivity 0.005 |
 | press | 0 rad。押下はドラッグではない |
+
+`--raw` は `INSIGNIA_RAWCAM=1` を立てて**作品側の感度補正・押下ガード・回転上限を全部外す**。
+上流が直っていれば素のままでも上の表と同じ値になるので、**上流の再検証はこちらで測る**
+（作品の App.swift を手で書き換えて戻す必要が無い）。`ID: PASS` の行を足すので、
+台帳の `oracle.verdictCommand` から機械判定できる。
 
 関連: metaphor-cli#189 / metaphor#1099 / metaphor#1100
 """
@@ -30,8 +36,20 @@ BINARY = ".build/debug/Sketch0824Insignia"
 MODES = ("stuck", "drag", "press")
 
 
-def replay(mode: str) -> None:
+# --raw のときの合否。素の metaphor がこう振る舞えば作品側の受け止めは要らなくなる。
+# stuck に合否を置かないのは、**押しっぱなしになるのはビューア側の落ち度**
+# (metaphor-cli#189) で、押下中に動けば回る metaphor の側は正しいから。この再生は
+# ビューアを通さず stdin へ直接流すので、そもそも cli#189 の判定にならない。測るだけにする。
+RAW_CHECKS = {
+    "drag": ("C1.dragGain", -3.0, 0.15, "metaphor#1099", "600px × sensitivity 0.005"),
+    "press": ("C2.pressJump", 0.0, 0.01, "metaphor#1100", "押下はドラッグではない"),
+}
+
+
+def replay(mode: str, raw: bool = False) -> None:
     env = dict(os.environ, METAPHOR_VIEWER="1", INSIGNIA_INPUTLOG="1")
+    if raw:
+        env["INSIGNIA_RAWCAM"] = "1"
     proc = subprocess.Popen(
         [BINARY],
         stdin=subprocess.PIPE,
@@ -67,12 +85,23 @@ def replay(mode: str) -> None:
         return
     first = float(lines[0].split("azimuth=")[1])
     last = float(lines[-1].split("azimuth=")[1])
-    print(f"{mode:6} 方位角 {first:+.4f} → {last:+.4f} rad（変化 {last - first:+.4f}）")
+    delta = last - first
+    print(f"{mode:6} 方位角 {first:+.4f} → {last:+.4f} rad（変化 {delta:+.4f}）")
+    if raw and mode in RAW_CHECKS:
+        check, expected, tol, issue, why = RAW_CHECKS[mode]
+        ok = abs(delta - expected) <= tol
+        print(
+            f"  {check}: {'PASS' if ok else 'FAIL'} "
+            f"作品側の受け止めを外して 変化 {delta:+.4f} rad 期待 {expected:+.1f}±{tol}"
+            f"（{why} / {issue}）"
+        )
 
 
 if __name__ == "__main__":
-    modes = sys.argv[1:] or list(MODES)
+    args = sys.argv[1:]
+    raw = "--raw" in args
+    modes = [a for a in args if a != "--raw"] or list(MODES)
     for mode in modes:
         if mode not in MODES:
-            sys.exit(f"モードは {' / '.join(MODES)} のどれか")
-        replay(mode)
+            sys.exit(f"モードは {' / '.join(MODES)} のどれか（ほかに --raw）")
+        replay(mode, raw=raw)

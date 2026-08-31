@@ -221,25 +221,71 @@ final class Instrument {
 
     // MARK: - G14 フレームの外の dispatch
 
-    /// `setup()` から `dispatch` を呼ぶと**警告も出さずに何も起きない**。
+    /// `setup()` から `dispatch` を呼ぶと何も起きない。**それを警告で知らせるか**を測る。
     ///
-    /// `threads: 0` は警告を出すのに、コマンドバッファが無い場合は
-    /// `ensureComputeEncoder()` が黙って nil を返して終わる。
-    /// GPU 計算の初期化を setup() に書きたくなるのは自然なので、ここは踏みやすい。
+    /// コマンドバッファが無い場合は `ensureComputeEncoder()` が nil を返して終わる。
+    /// 起票時（0.13.0）は `threads: 0` が警告するのに**この経路だけ無言**で、
+    /// GPU 計算の初期化を setup() に書きたくなるのは自然なので踏みやすかった
+    /// （metaphor#1092）。修正後は `dispatch` / `computeBarrier` が API ごとに
+    /// 1 度だけ警告するので、**書き込みが起きないことと警告が出ることの両方**を見る。
+    ///
+    /// 警告は metaphor の `metaphorWarning`（DEBUG 限定・標準出力）なので、
+    /// 呼び出しのあいだだけ標準出力を横取りして拾う。
     private func checkDispatchOutsideFrame(host: some Sketch) {
         fillBuffer[0] = -1
-        host.dispatch(fill, threads: 16) { encoder in
-            var v = Self.fillValue
-            encoder.setBuffer(self.fillBuffer.buffer, offset: 0, index: 0)
-            encoder.setBytes(&v, length: MemoryLayout<Float>.stride, index: 1)
+        let noise = Self.capturingStdout {
+            host.dispatch(fill, threads: 16) { encoder in
+                var v = Self.fillValue
+                encoder.setBuffer(self.fillBuffer.buffer, offset: 0, index: 0)
+                encoder.setBytes(&v, length: MemoryLayout<Float>.stride, index: 1)
+            }
+            host.computeBarrier()
         }
-        host.computeBarrier()
         let after = fillBuffer[0]
-        record("G14.dispatchOutsideFrame", after == -1 ? "LOOK" : "FAIL",
-               "setup() から dispatch → 書き込み無し=\(after == -1 ? "はい" : "いいえ")（実測 \(fmt(after, 0))）。"
-               + " 期待どおり何も起きないが**警告も出ない**（threads:0 は警告する）。"
-               + " compute() の外では効かないと知らないと気付けない")
+        let silent = after == -1
+        let lines = noise.split(separator: "\n").map(String.init)
+        let warned = lines.filter { $0.contains("Warning") && $0.contains("compute phase") }
+        let names = ["dispatch", "computeBarrier"].filter { api in
+            warned.contains { $0.contains("\(api):") }
+        }
+        // 横取りしたぶんは元の標準出力へ流し直す（ログから消してしまわない）。
+        for line in lines { Log.line(line) }
+        record("G14.dispatchOutsideFrame", silent && names.count == 2 ? "PASS" : "FAIL",
+               "setup() から dispatch → 書き込み無し=\(silent ? "はい" : "いいえ")（実測 \(fmt(after, 0))）"
+               + " / 警告が出た API \(names.joined(separator: "+").isEmpty ? "無し" : names.joined(separator: "+"))"
+               + " 期待 dispatch+computeBarrier（metaphor#1092。DEBUG ビルドのみ・API ごとに 1 度）"
+               + " / 先頭行: \(warned.first?.prefix(140) ?? "（警告なし）")")
         fillBuffer[0] = 0
+    }
+
+    /// `body` のあいだ標準出力（fd 1）をパイプへ差し替えて、書かれたものを返す。
+    ///
+    /// metaphor の警告は `print` 経由なので、Swift の `print` を差し替えるだけでは拾えない。
+    /// 失敗したら握り潰さずそのまま実行し、空文字を返す（検査は「警告なし」で FAIL になる）。
+    private static func capturingStdout(_ body: () -> Void) -> String {
+        fflush(stdout)
+        var fds: [Int32] = [0, 0]
+        let saved = dup(STDOUT_FILENO)
+        guard saved >= 0, pipe(&fds) == 0 else {
+            if saved >= 0 { close(saved) }
+            body()
+            return ""
+        }
+        dup2(fds[1], STDOUT_FILENO)
+        close(fds[1])
+        body()
+        fflush(stdout)
+        dup2(saved, STDOUT_FILENO)  // 書き込み端はこれで完全に閉じるので read は EOF を返す
+        close(saved)
+        var data = Data()
+        var buf = [UInt8](repeating: 0, count: 4096)
+        while true {
+            let n = read(fds[0], &buf, buf.count)
+            if n <= 0 { break }
+            data.append(contentsOf: buf[0..<n])
+        }
+        close(fds[0])
+        return String(decoding: data, as: UTF8.self)
     }
 
     private func checkKernelLimits() {
@@ -360,7 +406,14 @@ final class Instrument {
             }
         case "alloc":
             Log.line("TRAP alloc: stride×count が Int を溢れる大きさで createBuffer する")
-            _ = host.createBuffer(count: Int.max / 8, type: Voice.self)
+            let overflow = host.createBuffer(count: Int.max / 8, type: Voice.self)
+            // ここへ戻って来られること自体が判定。起票時（0.13.0）は掛け算がガードの手前に
+            // あったので、この行の中で即死して次の行が走らなかった（metaphor#1091）。
+            // 常時実行すると未修正版で起動できないので、この検査は DUET_TRAP=alloc でだけ出す。
+            record("G8b.allocOverflow", overflow == nil ? "PASS" : "FAIL",
+                   "createBuffer(count: Int.max/8 = \(Int.max / 8), stride \(MemoryLayout<Voice>.stride))"
+                   + " → \(overflow == nil ? "nil" : "確保できた") 期待 nil /"
+                   + " 起票時は返る前に Swift runtime failure: arithmetic overflow で即死した（metaphor#1091）")
         case "index":
             Log.line("TRAP index: GPUBuffer の範囲外添字を読む")
             _ = fillBuffer[fillBuffer.count + 1]

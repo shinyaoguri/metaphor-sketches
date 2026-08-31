@@ -48,6 +48,7 @@ tools/probe.sh contrast   # the shadow experiment: worldScale 120 vs 1
 tools/probe.sh frames     # one full turn as a numbered PNG sequence
 tools/probe.sh soak 180   # unattended run, RSS/CPU into a CSV
 tools/replay-input.py     # replay the viewer's input events with no GUI at all
+tools/replay-input.py --raw   # …with this sketch's own guards switched off (upstream recheck)
 ```
 
 `replay-input.py` is how the mouse bugs below were found and fixed. `METAPHOR_VIEWER=1` makes the
@@ -60,8 +61,18 @@ sequence can be replayed and measured without touching a mouse:
 | `drag` — `mouseDown` → `mouseDrag` ×60 → `mouseUp` | -3.00 rad = 600px × 0.005 rad/px |
 | `press` — a single `mouseDown`, nothing else | 0 rad (was -3.20) |
 
+The table above is what the sketch does *with* its guards. `--raw` sets `INSIGNIA_RAWCAM=1`,
+which drops all three of them (the sensitivity compensation, the press-frame guard and the
+0.25 rad/frame ceiling) so the same replay measures **metaphor's own behaviour** instead. That is
+how metaphor#1099 and metaphor#1100 are rechecked, without hand-editing `App.swift` and putting it
+back: `--raw` prints a `C1.dragGain` / `C2.pressJump` verdict line that the upstream ledger reads
+directly. `stuck` deliberately carries no verdict — with a genuinely stuck button, rotating *is*
+the correct metaphor behaviour, and the viewer-side cause (metaphor-cli#189) cannot be reached by
+an input stream that bypasses the viewer.
+
 Environment hooks: `INSIGNIA_SHOTS=1`, `INSIGNIA_FRAMES=<dir>`, `INSIGNIA_SCALE=<float>`,
-`INSIGNIA_SHADOWS=0|1`, `INSIGNIA_FLOOR=1`, `INSIGNIA_TRANSPARENT=1`, `INSIGNIA_SPIN=1`.
+`INSIGNIA_SHADOWS=0|1`, `INSIGNIA_FLOOR=1`, `INSIGNIA_TRANSPARENT=1`, `INSIGNIA_SPIN=1`,
+`INSIGNIA_RAWCAM=1`.
 
 ## Self-checks
 
@@ -89,7 +100,9 @@ decided by arithmetic rather than by looking.
 
 - **`perspective()` must be called every frame.** `Canvas3D` resets fov / near / far to the
   Processing-style defaults at the start of each frame, so calling it once in `setup()` silently
-  renders at the default 60° fov. Filed as [metaphor#1098](https://github.com/shinyaoguri/metaphor/issues/1098).
+  renders at the default 60° fov. Filed as [metaphor#1098](https://github.com/shinyaoguri/metaphor/issues/1098),
+  fixed on `main` (`llms.txt` per-API notes plus a "What Survives A Frame Boundary" table in
+  `llms-sketch.txt`) but **not in v0.14.0**, which is what this sketch pins.
 - **World +y points down the screen.** metaphor flips Y in the projection (Processing's
   convention). `Insignia.yAxis` applies that flip once, in `curve()`; everything downstream — the
   checks, the camera presets, the lights — lives in the flipped world.
@@ -117,9 +130,16 @@ decided by arithmetic rather than by looking.
   ([metaphor#1100](https://github.com/shinyaoguri/metaphor/issues/1100)). The third guard is a
   0.25 rad/frame ceiling as a backstop. Without them, resizing the viewer window left the object
   spinning at drag speed from bare mouse movement.
+  The press-frame jump is fixed on `main` (`orbitControl()` measures from the press position on
+  that frame) but **not in v0.14.0**; measured with `tools/replay-input.py --raw press`, a bare
+  press moves the azimuth by -22.86 rad on v0.14.0 and by 0.0000 rad on `main`. The stale button
+  state is still open upstream, so all three guards stay until the pin moves.
 - **`orbitCamera.sensitivity` is divided by `(1 - damping)`.** `damping` accumulates raw deltas
   into a velocity without compensating the gain, so it multiplies effective sensitivity by
   `1/(1 - damping)` — 7.1× at 0.86 — [metaphor#1099](https://github.com/shinyaoguri/metaphor/issues/1099).
+  Fixed on `main` but **not in v0.14.0**: with the compensation removed
+  (`tools/replay-input.py --raw drag`) a 600 px drag turns -44.29 rad on v0.14.0 and -3.00 rad on
+  `main`, which is the 600 × 0.005 the API documents.
 - **The tube radius is snapped to exactly 0 at `t = 0` and `t = 1`.** `sqrt(1 − u²)` picks up a
   1e-8 residual just short of `u = 1`, and the square root lifts it to 1e-4 — a ring 0.0003 across
   where a point belongs. Invisible, but it stops being a closed solid, and `G6` fails on it.
